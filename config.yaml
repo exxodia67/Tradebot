@@ -1,0 +1,47 @@
+# ==========================================================================
+#  Tradebot yapılandırması — strateji ve risk parametreleri
+#  API anahtarları burada DEĞİL, .env dosyasında tutulur.
+# ==========================================================================
+
+# İşlem yapılacak piyasa
+symbol: "BTCUSDT"
+timeframe: "5m"            # 1m, 5m, 15m, 1h ...
+
+# Strateji seçimi ve parametreleri
+strategy:
+  name: "ema_rsi"         # src/tradebot/strategy/ içindeki strateji adı
+  params:
+    ema_fast: 9
+    ema_slow: 21
+    rsi_period: 14
+    rsi_long_max: 70       # RSI bu değerin üstündeyse long açma (aşırı alım)
+    rsi_short_min: 30      # RSI bu değerin altındaysa short açma (aşırı satım)
+
+# Risk yönetimi — RiskManager bunları uygular (çekirdek güvenlik)
+risk:
+  account_risk_pct: 1.0    # işlem başına bakiyenin %'si kadar risk
+  max_leverage: 3          # kaldıraç tavanı (testnet'te de set edilir)
+
+  # Dinamik (ATR) stop — volatiliteye uyum sağlar, sabit %'den daha sağlam
+  use_atr_stops: true      # true = ATR'den stop; false = stop_loss_pct kullan
+  atr_period: 14
+  atr_stop_mult: 1.5       # stop mesafesi = ATR × bu çarpan
+  stop_loss_pct: 1.0       # ATR kapalı/yetersizse yedek stop mesafesi (%)
+
+  tp_rr: 2.0               # take-profit = stop mesafesi × tp_rr (R bazlı; 0 = kapalı)
+
+  max_open_positions: 1    # aynı anda en fazla açık pozisyon
+  max_trades_per_day: 10   # komisyon koruması: günlük işlem tavanı
+  cooldown_minutes: 15     # aynı sembolde işlem sonrası bekleme
+  daily_max_loss_pct: 5.0  # GÜNLÜK ZARAR KESİCİ: bu %'yi aşınca bot durur
+
+# Çalışma modu
+engine:
+  poll_seconds: 5          # kapanan mumu kontrol etme sıklığı (saniye)
+  dry_run: true            # true = gerçek emir göndermez, sadece loglar (kağıt mod)
+  paper_balance: 10000.0   # dry-run modunda başlangıç sanal bakiyesi (USDT)
+
+# Web dashboard
+web:
+  host: "127.0.0.1"        # yalnız lokal erişim (önerilen)
+  port: 8000

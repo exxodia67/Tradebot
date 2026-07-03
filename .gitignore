@@ -1,0 +1,25 @@
+# Sırlar — ASLA commit etme
+.env
+*.key
+
+# Veritabanı / loglar
+*.db
+*.sqlite
+*.sqlite3
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

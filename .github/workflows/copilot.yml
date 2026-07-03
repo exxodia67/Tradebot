@@ -1,0 +1,47 @@
+# 15 dakikada bir co-pilot tek gecis: analiz + Telegram uyari + komut cevabi.
+# PC kapaliyken bedava 7/24 calisma. Gecikme: ~15 dk (cron hassas degildir).
+# Kurulum: repo Settings -> Secrets and variables -> Actions ->
+#   New repository secret: TELEGRAM_BOT_TOKEN = BotFather token'i
+name: copilot
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}      # elle tetikleme (Actions sekmesinden)
+
+permissions:
+  contents: write            # durum dosyalarini geri commit etmek icin
+
+concurrency:
+  group: copilot
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Bagimliliklar
+        run: pip install -e .
+
+      - name: Co-pilot tek gecis
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python -m tradebot.telegram_bot --once
+
+      - name: Durumu kaydet (commit)
+        run: |
+          git config user.name "copilot-bot"
+          git config user.email "copilot-bot@users.noreply.github.com"
+          git add -f tg_state.json telegram_chat.json copilot_journal.db copilot_log.txt 2>/dev/null || true
+          git diff --cached --quiet && echo "degisiklik yok" && exit 0
+          git commit -m "copilot durum guncelleme [skip ci]"
+          git pull --rebase origin ${GITHUB_REF_NAME} || true
+          git push

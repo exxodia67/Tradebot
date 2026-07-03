@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tradebot Dashboard</title>
+  <style>
+    :root {
+      --bg: #0e1117; --panel: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --red: #f85149;
+      --blue: #58a6ff; --yellow: #d29922;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg); color: var(--text); padding: 24px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 12px; font-weight: 600; margin-left: 6px; }
+    .badge.testnet { background: #1f6feb33; color: var(--blue); }
+    .badge.live { background: #f8514933; color: var(--red); }
+    .badge.dry { background: #d2992233; color: var(--yellow); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+      gap: 14px; margin-bottom: 20px; }
+    .card { background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; }
+    .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase;
+      letter-spacing: .04em; }
+    .card .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
+    .pos { font-size: 22px; font-weight: 700; }
+    .green { color: var(--green); } .red { color: var(--red); }
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    button { border: 1px solid var(--border); background: var(--panel);
+      color: var(--text); padding: 10px 18px; border-radius: 8px; cursor: pointer;
+      font-size: 14px; font-weight: 600; }
+    button:hover { border-color: var(--blue); }
+    button.start { background: #238636; border-color: #238636; }
+    button.stop { background: #6e7681; border-color: #6e7681; }
+    button.emergency { background: var(--red); border-color: var(--red); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; }
+    .halt { background: #f8514922; border: 1px solid var(--red); color: var(--red);
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; display: none; }
+    .dot { height: 9px; width: 9px; border-radius: 50%; display: inline-block;
+      margin-right: 6px; background: var(--muted); }
+    .dot.on { background: var(--green); }
+    .warn { color: var(--muted); font-size: 12px; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <h1>🤖 Tradebot Dashboard
+    <span id="badge-net" class="badge testnet">TESTNET</span>
+    <span id="badge-dry" class="badge dry">DRY-RUN</span>
+  </h1>
+  <div class="sub">
+    <span class="dot" id="status-dot"></span>
+    <span id="status-text">durduruldu</span> ·
+    <span id="symbol">—</span> · son güncelleme: <span id="updated">—</span>
+  </div>
+
+  <div id="halt" class="halt"></div>
+
+  <div class="controls">
+    <button class="start" onclick="api('start')">▶ Başlat</button>
+    <button class="stop" onclick="api('stop')">⏸ Durdur</button>
+    <button class="emergency" onclick="emergencyClose()">⛔ Acil Kapat</button>
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="label">Fiyat</div><div class="value" id="price">—</div></div>
+    <div class="card"><div class="label">Equity (USDT)</div><div class="value" id="equity">—</div></div>
+    <div class="card"><div class="label">Toplam PnL</div><div class="value" id="pnl">—</div></div>
+    <div class="card"><div class="label">İşlem / Win%</div><div class="value" id="winrate">—</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="label">Açık Pozisyon</div>
+    <div class="pos" id="position">Pozisyon yok</div>
+    <div id="signal" class="sub" style="margin-top:8px">son sinyal: —</div>
+  </div>
+
+  <div class="card">
+    <div class="label" style="margin-bottom:10px">Son İşlemler</div>
+    <table>
+      <thead><tr><th>Sembol</th><th>Yön</th><th>Giriş</th><th>Çıkış</th><th>PnL</th><th>Sebep</th></tr></thead>
+      <tbody id="trades"><tr><td colspan="6" style="color:var(--muted)">—</td></tr></tbody>
+    </table>
+  </div>
+
+  <p class="warn">⚠️ Bu araç eğitim/araştırma amaçlıdır, finansal tavsiye değildir.
+    Gerçek paraya geçmeden önce testnet'te uzun süre doğrulayın.</p>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (n, d=2) => (n==null ? "—" : Number(n).toLocaleString("tr-TR",
+  {minimumFractionDigits:d, maximumFractionDigits:d}));
+
+function render(s) {
+  $("badge-net").textContent = s.testnet ? "TESTNET" : "CANLI";
+  $("badge-net").className = "badge " + (s.testnet ? "testnet" : "live");
+  $("badge-dry").textContent = s.dry_run ? "DRY-RUN" : "GERÇEK EMİR";
+  $("status-dot").className = "dot" + (s.running ? " on" : "");
+  $("status-text").textContent = s.running ? "çalışıyor" : "durduruldu";
+  $("symbol").textContent = (s.symbol||"—") + " " + (s.timeframe||"");
+  $("updated").textContent = s.last_update ? new Date(s.last_update).toLocaleTimeString("tr-TR") : "—";
+  $("price").textContent = fmt(s.last_price);
+  $("equity").textContent = fmt(s.equity);
+
+  const pnl = s.stats?.total_pnl ?? 0;
+  $("pnl").textContent = fmt(pnl);
+  $("pnl").className = "value " + (pnl>0?"green":pnl<0?"red":"");
+  $("winrate").textContent = (s.stats?.trades ?? 0) + " / %" + (s.stats?.win_rate ?? 0);
+
+  const h = $("halt");
+  if (s.halted) { h.style.display="block"; h.textContent = "⛔ " + s.halt_reason; }
+  else h.style.display="none";
+
+  if (s.position) {
+    const p = s.position, up = p.upnl ?? 0;
+    $("position").innerHTML = `${p.side} ${fmt(p.qty,4)} @ ${fmt(p.entry)} ` +
+      `<span class="${up>=0?'green':'red'}">(uPnL ${fmt(up)})</span><br>` +
+      `<span class="sub">SL ${fmt(p.sl)} · TP ${p.tp?fmt(p.tp):'—'}</span>`;
+  } else $("position").textContent = "Pozisyon yok";
+  $("signal").textContent = "son sinyal: " + (s.last_signal || "—");
+}
+
+async function loadTrades() {
+  try {
+    const r = await fetch("/api/state");
+  } catch(e) {}
+}
+
+async function api(action) {
+  await fetch("/api/" + action, {method:"POST"});
+}
+async function emergencyClose() {
+  if (confirm("Açık pozisyon kapatılıp bot durdurulacak. Emin misin?"))
+    await api("emergency_close");
+}
+
+let ws;
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage = e => render(JSON.parse(e.data));
+  ws.onclose = () => setTimeout(connect, 2000);
+}
+connect();
+</script>
+</body>
+</html>
