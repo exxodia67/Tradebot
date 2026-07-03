@@ -46,11 +46,10 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-from binance.client import Client
 from loguru import logger
 
 from tradebot.config import ROOT
-from tradebot.exchange.binance_futures import klines_to_df
+from tradebot.datafeed import make_feed
 from tradebot.indicators import adx, atr, rsi, sma
 from tradebot.journal import Journal
 
@@ -103,7 +102,7 @@ class Copilot:
         self.rsi_oversold = rsi_oversold
         self.no_quiet = no_quiet
         self.adx_overrides = {"15m": adx_min}   # CLI 15m eşiğini değiştirebilir
-        self.client = Client()  # mainnet public (sadece veri)
+        self.feed = make_feed()  # futures; bloklu ortamda (GitHub) Vision spot
         self.journal = Journal()
         self.log_path = ROOT / "copilot_log.txt"
         self._reentry: dict[str, dict] = {}     # plan -> ikinci-giriş nöbeti
@@ -123,8 +122,7 @@ class Copilot:
 
     # ---- analiz ---------------------------------------------------------
     def _tf(self, interval: str, limit: int = 120):
-        return klines_to_df(self.client.futures_klines(
-            symbol=self.symbol, interval=interval, limit=limit))
+        return self.feed.klines(self.symbol, interval, limit)
 
     def _plan_adx_min(self, tf: str) -> float:
         return self.adx_overrides.get(tf, PLANS[tf]["adx_min"])
@@ -134,7 +132,7 @@ class Copilot:
         p = PLANS[tf]
         d_hi = self._tf(p["trend"])
         d_lo = self._tf(tf)
-        price = float(self.client.futures_mark_price(symbol=self.symbol)["markPrice"])
+        price = self.feed.mark_price(self.symbol)
 
         # üst TF yön
         h7, h25, h99 = (sma(d_hi["close"], q).iloc[-1] for q in (7, 25, 99))
@@ -289,7 +287,7 @@ class Copilot:
 
         while True:
             try:
-                price = float(self.client.futures_mark_price(symbol=self.symbol)["markPrice"])
+                price = self.feed.mark_price(self.symbol)
                 ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 segments: list[str] = []
 

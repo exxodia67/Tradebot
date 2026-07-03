@@ -35,7 +35,6 @@ from loguru import logger
 
 from tradebot.config import ROOT, Secrets
 from tradebot.copilot import PLANS, Copilot, Setup
-from tradebot.exchange.binance_futures import klines_to_df
 from tradebot.indicators import adx, atr, rsi, sma
 from tradebot.journal import Journal
 
@@ -84,14 +83,14 @@ class TelegramBot:
 
     # ---- analizler ---------------------------------------------------------
     def durum_text(self) -> str:
-        c = self.copilot.client
-        price = float(c.futures_mark_price(symbol=self.symbol)["markPrice"])
-        tk = c.futures_ticker(symbol=self.symbol)
+        feed = self.copilot.feed
+        price = feed.mark_price(self.symbol)
+        tk = feed.ticker24(self.symbol)
         lines = [f"📊 {self.symbol}  {price:.2f}",
                  f"24s: %{float(tk['priceChangePercent']):+.2f}  "
                  f"zirve {float(tk['highPrice']):.0f} / dip {float(tk['lowPrice']):.0f}", ""]
         for tf in TFS:
-            d = klines_to_df(c.futures_klines(symbol=self.symbol, interval=tf, limit=120))
+            d = feed.klines(self.symbol, tf, 120)
             m7, m25, m99 = (sma(d["close"], q).iloc[-1] for q in (7, 25, 99))
             a = float(adx(d, 14).iloc[-1])
             r = float(rsi(d["close"], 14).iloc[-1])
@@ -172,7 +171,7 @@ class TelegramBot:
     # ---- copilot tek geçiş (hem sürekli mod hem --once bunu kullanır) -------
     def _tick(self, active: dict) -> None:
         cp = self.copilot
-        price = float(cp.client.futures_mark_price(symbol=self.symbol)["markPrice"])
+        price = cp.feed.mark_price(self.symbol)
         for tf in PLANS:
             st = active.get(tf)
             if st is None:
