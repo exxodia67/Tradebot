@@ -440,7 +440,9 @@ class TelegramBot:
         while True:
             try:
                 self._tick(active)
-                if time.time() - last_report >= report_sec:   # 10 dk'da bir rapor
+                # öğrenme modülü çalışıyorsa 10 dk raporunu O atar (tek mesaj olsun)
+                if (not getattr(self, "_has_learn", False)
+                        and time.time() - last_report >= report_sec):
                     last_report = time.time()
                     self.send(self.rapor_text())
                 self._save_state(active)
@@ -467,11 +469,19 @@ class TelegramBot:
     def run(self) -> None:
         t = threading.Thread(target=self.copilot_loop, daemon=True)
         t.start()
+        # öğrenme modülü aynı pencerede — ayrı bat/pencere GEREKMEZ
+        self._has_learn = False
+        try:
+            from tradebot.ogrenme_daemon import OgrenmeDaemon
+            threading.Thread(target=OgrenmeDaemon(self.symbol, bot=self).run,
+                             daemon=True).start()
+            self._has_learn = True
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"öğrenme modülü başlatılamadı: {e}")
         if self.chat_id:
-            self.send("🤖 Co-pilot PC modunda başladı. /durum ile kontrol et.\n"
-                      "⚠️ GitHub Actions botu da dönüyor: PC modu AYRI defter tutar, "
-                      "PC kapanınca buradaki açık işlemler takipsiz kalır. "
-                      "Uzun takip için Actions'a güven, PC modunu test için kullan.")
+            self.send("🤖 Co-pilot başladı: anlık kurulum uyarısı + kâğıt işlem "
+                      "takibi + 10 dk'da bir öğrenme raporu — hepsi bu pencerede. "
+                      "/durum ile kontrol et.")
         self.poll_loop()   # ana thread komutları dinler
 
 

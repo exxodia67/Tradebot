@@ -48,22 +48,26 @@ LEARN_PLANS = (
 
 
 class OgrenmeDaemon:
-    def __init__(self, symbol: str = "ETHUSDT"):
+    def __init__(self, symbol: str = "ETHUSDT", bot=None):
         self.symbol = symbol
-        self.token = Secrets().telegram_bot_token
-        if not self.token:
-            print("HATA: .env içinde TELEGRAM_BOT_TOKEN yok.")
-            sys.exit(1)
+        self.bot = bot          # telegram_bot içinde gömülü mod: açık işlemleri de raporlar
+        if bot is not None:
+            self.token = bot.token
+        else:
+            self.token = Secrets().telegram_bot_token
+            if not self.token:
+                print("HATA: .env içinde TELEGRAM_BOT_TOKEN yok.")
+                sys.exit(1)
         self.chat_id = None
         if CHAT_FILE.exists():
             try:
                 self.chat_id = json.loads(CHAT_FILE.read_text())["chat_id"]
             except Exception:  # noqa: BLE001
                 pass
-        if self.chat_id is None:
+        if self.chat_id is None and bot is None:
             print("HATA: telegram_chat.json yok — önce bota /start yazılmış olmalı.")
             sys.exit(1)
-        self.feed = make_feed()
+        self.feed = bot.copilot.feed if bot is not None else make_feed()
         self.best: dict[str, list[str]] = {}     # tf -> en iyi kombo satırları
         self.last_learn: datetime | None = None
         self.learning = False
@@ -71,6 +75,11 @@ class OgrenmeDaemon:
 
     # ---- telegram (sadece gönderme — dinleme YOK, çakışma YOK) ------------
     def send(self, text: str) -> None:
+        if self.chat_id is None:      # gömülü modda /start henüz gelmemiş olabilir
+            if self.bot is not None and self.bot.chat_id is not None:
+                self.chat_id = self.bot.chat_id
+            else:
+                return
         for i in range(0, len(text), 3900):
             try:
                 requests.post(f"https://api.telegram.org/bot{self.token}/sendMessage",
@@ -148,6 +157,7 @@ class OgrenmeDaemon:
     def rapor(self) -> str:
         saat = (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%H:%M")
         lines = [f"🧠 Öğrenme raporu {saat} TR — {self.symbol}"]
+        price = None
         try:
             price = self.feed.mark_price(self.symbol)
             tk = self.feed.ticker24(self.symbol)
@@ -162,6 +172,18 @@ class OgrenmeDaemon:
                 lines.append(f"{tf} {diz} ADX{a:.0f} RSI{r:.0f}")
         except Exception as e:  # noqa: BLE001
             lines.append(f"rejim okunamadı: {e}")
+
+        # gömülü mod: botun açık kâğıt işlemleri de bu rapora girer
+        if self.bot is not None and price is not None:
+            aktif = getattr(self.bot, "_active", {}) or {}
+            if aktif:
+                for tf, (s, _aid, _ats) in aktif.items():
+                    chg = ((price - s.entry) / s.entry * 100
+                           * (1 if s.side == "LONG" else -1))
+                    lines.append(f"📌 AÇIK [{tf}] {s.side} @{s.entry:.2f} → "
+                                 f"{chg:+.2f}% (5x {chg * 5:+.2f}%)")
+            else:
+                lines.append("📌 Açık kâğıt işlem yok.")
 
         if self.last_learn:
             yas = (datetime.now(timezone.utc) - self.last_learn).total_seconds() / 3600
@@ -188,9 +210,10 @@ class OgrenmeDaemon:
     def run(self) -> None:
         logger.info(f"Öğrenme daemon'u başladı: {self.symbol} | rapor {REPORT_SEC}s | "
                     f"tam öğrenme {LEARN_EVERY_H}h")
-        self.send(f"🧠 Öğrenme daemon'u başladı ({self.symbol}). "
-                  f"10 dk'da bir rapor, {LEARN_EVERY_H} saatte bir tam öğrenme. "
-                  f"Komut dinlemez — komutlar öbür PC'deki botta.")
+        if self.bot is None:
+            self.send(f"🧠 Öğrenme daemon'u başladı ({self.symbol}). "
+                      f"10 dk'da bir rapor, {LEARN_EVERY_H} saatte bir tam öğrenme. "
+                      f"Komut dinlemez — komutlar bottadır.")
         while True:
             if not self.learning and (
                     self.last_learn is None or
