@@ -5,26 +5,59 @@ cd /d "%~dp0"
 
 REM ============================================================
 REM  TEK DOSYA: baska bir PC'de bunu cift tikla, gerisi otomatik.
-REM  Gereken tek sey: Python 3.11+ kurulu olmasi (python.org).
-REM  Kurarken "Add python.exe to PATH" kutusunu ISARETLE.
+REM  Python'u PATH'te olmasa bile kendisi bulur.
 REM ============================================================
 
-where python >nul 2>nul
-if errorlevel 1 (
-  echo [HATA] Python bulunamadi.
-  echo   1. https://www.python.org/downloads/ adresinden 3.11+ indir
-  echo   2. Kurulumda "Add python.exe to PATH" kutusunu isaretle
-  echo   3. Bu dosyayi tekrar calistir
-  pause
-  exit /b 1
+set "PYEXE="
+set "PYARG="
+
+REM 1) py launcher (python.org kurulumuyla gelir, PATH derdi yok)
+py -3 -c "1" >nul 2>nul
+if not errorlevel 1 (
+  set "PYEXE=py"
+  set "PYARG=-3"
+  goto bulundu
 )
+
+REM 2) PATH'teki python (Store sahte-alias'ini ele: gercekten calisiyor mu?)
+python -c "1" >nul 2>nul
+if not errorlevel 1 (
+  set "PYEXE=python"
+  goto bulundu
+)
+
+REM 3) Bilinen kurulum klasorleri
+for %%V in (311 312 313 310) do (
+  if exist "%LocalAppData%\Programs\Python\Python%%V\python.exe" (
+    set "PYEXE=%LocalAppData%\Programs\Python\Python%%V\python.exe"
+    goto bulundu
+  )
+  if exist "C:\Program Files\Python%%V\python.exe" (
+    set "PYEXE=C:\Program Files\Python%%V\python.exe"
+    goto bulundu
+  )
+)
+
+echo [HATA] Python hicbir yerde bulunamadi. Su komutla kur (CMD'ye yapistir):
+echo winget install -e --id Python.Python.3.11 --override "/quiet InstallAllUsers=0 PrependPath=1"
+echo Sonra bu dosyayi TEKRAR calistir.
+pause
+exit /b 1
+
+:bulundu
+echo Python bulundu: %PYEXE%
 
 if not exist .venv (
   echo [1/3] Sanal ortam kuruluyor...
-  python -m venv .venv
+  "%PYEXE%" %PYARG% -m venv .venv
+  if errorlevel 1 (
+    echo [HATA] venv kurulamadi.
+    pause
+    exit /b 1
+  )
 )
 
-echo [2/3] Bagimliliklar kuruluyor...
+echo [2/3] Bagimliliklar kuruluyor... (ilk sefer 1-2 dk surer)
 .venv\Scripts\python -m pip install -e . --quiet
 if errorlevel 1 (
   echo [HATA] Kurulum basarisiz. Internet baglantisini kontrol et.
