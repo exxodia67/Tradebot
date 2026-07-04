@@ -85,6 +85,15 @@ class Journal:
             "toplam_pnl_pct": round(sum(pnls), 2),
         }
 
+    def last_trades(self, n: int = 8) -> list[dict]:
+        """Son n kayıt (açık + kapalı), yeniden eskiye."""
+        con = sqlite3.connect(self.path)
+        con.row_factory = sqlite3.Row
+        rows = con.execute(
+            "SELECT * FROM alerts ORDER BY id DESC LIMIT ?", (n,)).fetchall()
+        con.close()
+        return [dict(r) for r in rows]
+
     # ---- öğrenme analizi ------------------------------------------------
     def closed_rows(self) -> list[dict]:
         con = sqlite3.connect(self.path)

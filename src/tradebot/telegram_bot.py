@@ -63,6 +63,7 @@ class TelegramBot:
         self.journal = self.copilot.journal
         self._offset = 0
         self._last_daily: str | None = None
+        self._active: dict = {}   # tf -> (Setup, aid, ts) — /durum'da göstermek için
 
     # ---- telegram API ----------------------------------------------------
     def _api(self, method: str, **params):
@@ -97,6 +98,16 @@ class TelegramBot:
             diz = "⬆️" if m7 > m25 > m99 else "⬇️" if m7 < m25 < m99 else "↔️"
             poz = ">" if price > m7 else "<"
             lines.append(f"{tf:>3} {diz} ADX{a:2.0f} RSI{r:2.0f}  fiyat{poz}MA7({m7:.0f})")
+        lines.append("")
+        if self._active:
+            for tf, (s, _aid, _ats) in self._active.items():
+                chg = ((price - s.entry) / s.entry * 100
+                       * (1 if s.side == "LONG" else -1))
+                lines.append(f"📌 AÇIK kâğıt işlem [{tf}] {s.side} @{s.entry:.2f}  "
+                             f"şu an {chg:+.2f}% (5x {chg * 5:+.2f}%)\n"
+                             f"   stop {s.stop:.2f}  hedef {s.target:.2f}")
+        else:
+            lines.append("📌 Açık kâğıt işlem yok — kurulum bekleniyor.")
         return "\n".join(lines)
 
     def analiz_text(self) -> str:
@@ -113,9 +124,25 @@ class TelegramBot:
 
     def journal_text(self) -> str:
         s = self.journal.summary()
-        return (f"📒 Journal: {s['kapanan']} kapanan işlem\n"
-                f"win %{s['win_rate']}  ort %{s['ort_pnl_pct']}  "
-                f"toplam %{s['toplam_pnl_pct']}")
+        out = [f"📒 Journal: {s['kapanan']} kapanan işlem",
+               f"win %{s['win_rate']}  ort %{s['ort_pnl_pct']}  "
+               f"toplam %{s['toplam_pnl_pct']} (5x %{s['toplam_pnl_pct'] * 5:+.2f})",
+               ""]
+        for r in self.journal.last_trades(8):
+            try:
+                t = (datetime.fromisoformat(r["ts"]) + timedelta(hours=3)
+                     ).strftime("%d.%m %H:%M")
+            except Exception:  # noqa: BLE001
+                t = r["ts"][:16]
+            if r["outcome"]:
+                em = "✅" if r["outcome"] == "HEDEF" else "🛑"
+                out.append(f"{em} {t} {r['side']} {r['entry']:.2f} -> "
+                           f"{r['outcome']} {r['pnl_pct']:+.2f}% "
+                           f"(5x {r['pnl_pct'] * 5:+.1f}%)")
+            else:
+                out.append(f"⏳ {t} {r['side']} {r['entry']:.2f} AÇIK "
+                           f"(stop {r['stop']:.2f} hedef {r['target']:.2f})")
+        return "\n".join(out)
 
     # ---- komut döngüsü -----------------------------------------------------
     def _handle(self, text: str) -> str | None:
@@ -270,6 +297,7 @@ class TelegramBot:
 
     def copilot_loop(self, interval: int = 60) -> None:
         active: dict[str, tuple] = {}
+        self._active = active
         logger.info("Copilot döngüsü başladı (telegram modu).")
         while True:
             try:
@@ -312,6 +340,7 @@ class TelegramBot:
                 con.close()
                 ats = row[0] if row else datetime.now(timezone.utc).isoformat()
             active[tf] = (Setup(**a["setup"]), a["aid"], ats)
+        self._active = active   # /durum açık işlemleri görsün
 
         self._process_updates(timeout=0)   # bekleyen komutları cevapla
         try:
@@ -334,7 +363,10 @@ class TelegramBot:
         t = threading.Thread(target=self.copilot_loop, daemon=True)
         t.start()
         if self.chat_id:
-            self.send("🤖 Co-pilot yeniden başladı. /durum ile kontrol et.")
+            self.send("🤖 Co-pilot PC modunda başladı. /durum ile kontrol et.\n"
+                      "⚠️ GitHub Actions botu da dönüyor: PC modu AYRI defter tutar, "
+                      "PC kapanınca buradaki açık işlemler takipsiz kalır. "
+                      "Uzun takip için Actions'a güven, PC modunu test için kullan.")
         self.poll_loop()   # ana thread komutları dinler
 
 
