@@ -179,6 +179,13 @@ class TelegramBot:
                 if setup is None:
                     setup, _ = cp.analyze(tf)
                 if setup:
+                    # tazelik: uyarı sana ulaştığında fiyat kaçmış olabilir
+                    # (Actions cron gecikmeli). prog = giriş->hedef yolunun oranı.
+                    prog = (price - setup.entry) / (setup.target - setup.entry)
+                    if (setup.side == "LONG" and price <= setup.stop) or \
+                       (setup.side == "SHORT" and price >= setup.stop):
+                        cp.say(f"TG: [{tf}] kurulum bayat (fiyat stop tarafında), uyarı yok")
+                        continue
                     aid = self.journal.add(
                         self.symbol, setup.side, setup.entry, setup.stop,
                         setup.target, setup.adx, setup.reason,
@@ -186,11 +193,20 @@ class TelegramBot:
                         room_atr=setup.room_atr, sep_pct=setup.sep_pct,
                         hour=setup.hour)
                     active[tf] = (setup, aid)
-                    self.send(f"🔔 KURULUM [{tf}] {setup.side}\n"
-                              f"Giriş: {setup.entry:.2f}\nStop: {setup.stop:.2f}\n"
-                              f"Hedef: {setup.target:.2f}\n{setup.reason}\n"
-                              f"(Emri ve STOP'u SEN koy — 5x)")
-                    cp.say(f"TG uyarı: [{tf}] {setup.side} {setup.entry:.2f}")
+                    saat = (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%H:%M")
+                    if prog >= 0.35:
+                        head = (f"⏰ GEÇ KALINDI [{tf}] {setup.side} — fiyat yolun "
+                                f"%{prog * 100:.0f}'ini gitmiş. GİRME, R/R bozuldu.\n"
+                                f"Kâğıt üstünde takip edeceğim (analiz için).")
+                    else:
+                        head = (f"🔔 KURULUM [{tf}] {setup.side}  ({saat} TR)\n"
+                                f"Tazelik: yolun %{prog * 100:.0f}'i gitti "
+                                f"(kural: %35 üstüyse girilmez)")
+                    self.send(f"{head}\n"
+                              f"Giriş: {setup.entry:.2f}  Şu an: {price:.2f}\n"
+                              f"Stop: {setup.stop:.2f}\nHedef: {setup.target:.2f}\n"
+                              f"{setup.reason}\n(Emri ve STOP'u SEN koy — 5x)")
+                    cp.say(f"TG uyarı: [{tf}] {setup.side} {setup.entry:.2f} (yol %{prog*100:.0f})")
             else:
                 a, aid = st
                 chg = (price - a.entry) / a.entry * 100 * (1 if a.side == "LONG" else -1)
