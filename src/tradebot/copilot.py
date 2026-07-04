@@ -171,7 +171,9 @@ class Copilot:
 
         # --- Kalite filtreleri ---
         if not self.no_quiet and hour in p["quiet"]:
-            return None, f"{read} · gece dilimi ({hour:02d}UTC) kötü — BEKLE"
+            return None, (f"{read} · gece {(hour + 3) % 24:02d}:00 TR — 90g testte bu "
+                          f"dilim 15m'de zararlı (86 işlem, win %26, ort -%0.19) — "
+                          f"15m uyarısı kapalı, 1h planı gece de açık")
         if adx_v < self._plan_adx_min(tf):
             return None, f"{read} · ADX zayıf<{self._plan_adx_min(tf):.0f} (choppy) — BEKLE"
         if sep_pct < self.ma_sep_min_pct:

@@ -134,6 +134,12 @@ class TelegramBot:
             parts.append(f"\n🧭 4h çerçeve: {diz4} · ADX{a4:.0f} RSI{r4:.0f}\n"
                          f"   direnç {res4:.0f} / destek {sup4:.0f} · "
                          f"MA25 {f25:.0f} (fiyat {'üstünde ✓' if price > f25 else 'altında ✗'})")
+            dir4 = "LONG" if f7 > f25 > f99 else "SHORT" if f7 < f25 < f99 else None
+            b1d = self._bias("1d")
+            if dir4 and b1d != dir4:
+                parts.append(f"   ⚠️ 4h {('yukarı' if dir4 == 'LONG' else 'aşağı')} ama 1d "
+                             f"{'belirsiz' if b1d is None else 'ters'} — dönüş dönemi "
+                             f"olabilir; 1h planı 1d teyidini bekler (aceleci girmez)")
         except Exception as e:  # noqa: BLE001
             parts.append(f"\n🧭 4h çerçeve okunamadı: {e}")
 
@@ -159,8 +165,19 @@ class TelegramBot:
             satir = [f"{baslik}", f"⏳ {status}"]
             try:
                 bias = self._bias(p["trend"])
-                if bias:
-                    d = feed.klines(self.symbol, tf, 120)
+                d = feed.klines(self.symbol, tf, 120)
+                e7, e25, e99 = (sma(d["close"], q).iloc[-1] for q in (7, 25, 99))
+                ent_dir = ("LONG" if e7 > e25 > e99
+                           else "SHORT" if e7 < e25 < e99 else None)
+                if bias and ent_dir and ent_dir != bias:
+                    # üst filtre ile giriş TF ters — plan bu çelişkide işlem üretmez;
+                    # ters yönde taslak göstermek yanıltıcı olur
+                    satir.append(
+                        f"   ⚠️ Çelişki: {p['trend']} {bias} diyor ama {tf} grafiği "
+                        f"{ent_dir} yönlü. Plan çelişkide işlem ÜRETMEZ.\n"
+                        f"   {p['trend']} dönerse {ent_dir} taslağı gelir — dönüş "
+                        f"sinyali olabilir, teyit bekleniyor.")
+                elif bias:
                     atr_v = float(atr(d, 14).iloc[-1])
                     sd = atr_v * self.copilot.atr_stop_mult
                     stop = price - sd if bias == "LONG" else price + sd
