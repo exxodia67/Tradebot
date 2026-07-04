@@ -943,3 +943,5 @@ TG uyarı: [15m] LONG 1759.15
 ===== OTURUM BAŞLADI 2026-07-04 12:32:00 | ETHUSDT | planlar: [15m->1h 2R], [1h->1d 3R] | her 30s | kaldıraç 5x =====
 2026-07-04 12:32:01  ETHUSDT 1757.00  ·  15m: LONG ADX27 RSI52 | dizilim ✓ fiyat-MA7 ✗ · 15m tetik yok (fiyat MA7'nin ters tarafında (1759)) — BEKLE  |  1h: SHORT ADX56 RSI61 | dizilim ✗ fiyat-MA7 ✓ · 1h tetik yok (dizilim bozuk) — BEKLE
 2026-07-04 12:32:33  ETHUSDT 1757.54  ·  15m: LONG ADX27 RSI53 | dizilim ✓ fiyat-MA7 ✗ · 15m tetik yok (fiyat MA7'nin ters tarafında (1759)) — BEKLE  |  1h: SHORT ADX56 RSI61 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+TG kapanış: ✅ [15m] HEDEF: LONG 1754.45 -> 1769.19 (+0.84% | 5x +4.20%)
+Değme saati: 16:20 TR (mum taramasıyla tespit)

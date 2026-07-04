@@ -1,1 +1,1 @@
-{"offset": 0, "last_daily": null, "reentry": {}, "active": {"15m": {"setup": {"side": "LONG", "entry": 1754.45, "stop": 1747.081584058718, "target": 1769.1868318825643, "adx": 23.61890689862756, "reason": "[15m] PULLBACK(MA25 dokunuş) + 1h trend + ADX24 vol0.8x RSI51 yer4.3ATR (hedef 2R)", "tf": "15m", "rsi": 51.428113939920166, "vol_ratio": 0.7677520790603408, "room_atr": 4.342181583526729, "sep_pct": 0.12319693188340276, "hour": 5}, "aid": 1, "ts": "2026-07-04T05:26:32.905336+00:00"}}}
+{"offset": 192553737, "last_daily": null, "reentry": {}, "active": {}}
