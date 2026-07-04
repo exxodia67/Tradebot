@@ -1,4 +1,4 @@
-
+﻿
 ===== OTURUM BAŞLADI 2026-07-02 09:00:16 | ETHUSDT | her 30s | kaldıraç 5x =====
 2026-07-02 09:00:16  ETHUSDT 1625.99  ·  yön LONG ama 15m hizalanma/tetik yok — BEKLE
 2026-07-02 09:00:48  ETHUSDT 1625.77  ·  yön LONG ama 15m hizalanma/tetik yok — BEKLE
@@ -65,15 +65,13 @@
 2026-07-02 09:32:31  ETHUSDT 1626.37  ·  yön LONG ama 15m hizalanma/tetik yok — BEKLE
 2026-07-02 09:33:03  ETHUSDT 1627.20  ·  yön LONG ama 15m hizalanma/tetik yok — BEKLE
 
-============================================================
-  🔔 KURULUM: LONG
+=====================================================  🔔 KURULUM: LONG
   Giriş : 1627.88
   Stop  : 1618.43
   Hedef : 1646.77
   Neden : 1h↑ + 15m dizili + fiyat>MA7 + ADX23
   (Emri ve STOP'u Binance'e SEN koy. Kaldıraç 5x.)
-============================================================
-
+=====================================================
 2026-07-02 09:34:05  [AÇIK LONG] 1628.56 (+0.04%) stop 1618.43 hedef 1646.77
 2026-07-02 09:34:35  [AÇIK LONG] 1628.69 (+0.05%) stop 1618.43 hedef 1646.77
 2026-07-02 09:35:06  [AÇIK LONG] 1628.07 (+0.01%) stop 1618.43 hedef 1646.77
@@ -905,3 +903,43 @@
 2026-07-04 02:47:41  ETHUSDT 1758.99  ·  15m: LONG ADX40 RSI60 | dizilim ✓ fiyat-MA7 ✓ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
 2026-07-04 02:48:13  ETHUSDT 1759.23  ·  15m: LONG ADX40 RSI61 | dizilim ✓ fiyat-MA7 ✓ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
 TG uyarı: [15m] LONG 1754.45
+2026-07-04 02:48:45  ETHUSDT 1759.72  ·  15m: LONG ADX40 RSI61 | dizilim ✓ fiyat-MA7 ✓ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:49:17  ETHUSDT 1759.43  ·  15m: LONG ADX40 RSI61 | dizilim ✓ fiyat-MA7 ✓ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:49:49  ETHUSDT 1758.22  ·  15m: LONG ADX40 RSI59 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:50:21  ETHUSDT 1757.13  ·  15m: LONG ADX40 RSI57 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:50:53  ETHUSDT 1757.28  ·  15m: LONG ADX40 RSI57 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:51:25  ETHUSDT 1756.86  ·  15m: LONG ADX40 RSI57 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:51:57  ETHUSDT 1757.07  ·  15m: LONG ADX40 RSI57 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:52:29  ETHUSDT 1757.51  ·  15m: LONG ADX40 RSI57 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:53:01  ETHUSDT 1757.20  ·  15m: LONG ADX40 RSI57 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:53:33  ETHUSDT 1756.62  ·  15m: LONG ADX40 RSI56 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:54:05  ETHUSDT 1756.80  ·  15m: LONG ADX40 RSI56 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 02:54:37  ETHUSDT 1756.74  ·  15m: LONG ADX40 RSI56 | dizilim ✓ fiyat-MA7 ✗ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI68 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+
+===== OTURUM BAŞLADI 2026-07-04 10:51:33 | ETHUSDT | planlar: [15m->1h 2R], [1h->1d 3R] | her 30s | kaldıraç 5x =====
+2026-07-04 10:51:33  ETHUSDT 1758.10  ·  15m: LONG ADX22 RSI59 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:52:05  ETHUSDT 1758.35  ·  15m: LONG ADX22 RSI59 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:52:37  ETHUSDT 1758.29  ·  15m: LONG ADX22 RSI59 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:53:09  ETHUSDT 1758.23  ·  15m: LONG ADX22 RSI59 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:53:41  ETHUSDT 1758.11  ·  15m: LONG ADX22 RSI59 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:54:13  ETHUSDT 1757.45  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:54:45  ETHUSDT 1757.39  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:55:17  ETHUSDT 1757.38  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:55:49  ETHUSDT 1757.42  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:56:21  ETHUSDT 1757.50  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:56:53  ETHUSDT 1757.04  ·  15m: LONG ADX22 RSI57 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI62 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:57:25  ETHUSDT 1756.98  ·  15m: LONG ADX22 RSI57 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI62 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:57:58  ETHUSDT 1757.77  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:58:31  ETHUSDT 1757.34  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:59:03  ETHUSDT 1757.37  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.08 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 10:59:35  ETHUSDT 1757.73  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 11:00:07  ETHUSDT 1757.77  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 11:00:39  ETHUSDT 1758.25  ·  15m: LONG ADX22 RSI59 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.10 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 11:01:11  ETHUSDT 1757.69  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 11:01:43  ETHUSDT 1757.68  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 11:02:15  ETHUSDT 1757.61  ·  15m: LONG ADX22 RSI58 | dizilim ✓ fiyat-MA7 ✓ · MA'lar yapışık %0.09 (whipsaw) — BEKLE  |  1h: SHORT ADX56 RSI63 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+TG uyarı: [15m] LONG 1759.15
+
+===== OTURUM BAŞLADI 2026-07-04 12:32:00 | ETHUSDT | planlar: [15m->1h 2R], [1h->1d 3R] | her 30s | kaldıraç 5x =====
+2026-07-04 12:32:01  ETHUSDT 1757.00  ·  15m: LONG ADX27 RSI52 | dizilim ✓ fiyat-MA7 ✗ · 15m tetik yok (fiyat MA7'nin ters tarafında (1759)) — BEKLE  |  1h: SHORT ADX56 RSI61 | dizilim ✗ fiyat-MA7 ✓ · 1h tetik yok (dizilim bozuk) — BEKLE
+2026-07-04 12:32:33  ETHUSDT 1757.54  ·  15m: LONG ADX27 RSI53 | dizilim ✓ fiyat-MA7 ✗ · 15m tetik yok (fiyat MA7'nin ters tarafında (1759)) — BEKLE  |  1h: SHORT ADX56 RSI61 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE

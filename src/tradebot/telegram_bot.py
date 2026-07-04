@@ -169,6 +169,33 @@ class TelegramBot:
                 time.sleep(5)
 
     # ---- copilot tek geçiş (hem sürekli mod hem --once bunu kullanır) -------
+    def _resolve_hit(self, a: Setup, ats: str):
+        """Uyarı anından bu yana 5m mumlarını tarar: stop/hedef değdi mi?
+
+        Actions cron saatlerce atlayabilir; o anki fiyata bakmak aradaki
+        STOP/HEDEF'i kaçırır. Mum taraması kaçırmaz. Aynı mumda ikisi de
+        değmişse kötümser varsayım: STOP (learner ile aynı kural).
+        Dönen: (hit, exit_px, hit_time) veya (None, None, None).
+        """
+        since = datetime.fromisoformat(ats)
+        mins = (datetime.now(timezone.utc) - since).total_seconds() / 60
+        limit = min(1000, max(3, int(mins / 5) + 3))
+        d = self.copilot.feed.klines(self.symbol, "5m", limit)
+        for _, row in d.iterrows():
+            if row["open_time"] < since:
+                continue
+            if a.side == "LONG":
+                if row["low"] <= a.stop:
+                    return "STOP", a.stop, row["open_time"]
+                if row["high"] >= a.target:
+                    return "HEDEF", a.target, row["open_time"]
+            else:
+                if row["high"] >= a.stop:
+                    return "STOP", a.stop, row["open_time"]
+                if row["low"] <= a.target:
+                    return "HEDEF", a.target, row["open_time"]
+        return None, None, None
+
     def _tick(self, active: dict) -> None:
         cp = self.copilot
         price = cp.feed.mark_price(self.symbol)
@@ -192,7 +219,8 @@ class TelegramBot:
                         rsi=setup.rsi, vol_ratio=setup.vol_ratio,
                         room_atr=setup.room_atr, sep_pct=setup.sep_pct,
                         hour=setup.hour)
-                    active[tf] = (setup, aid)
+                    active[tf] = (setup, aid,
+                                  datetime.now(timezone.utc).isoformat())
                     saat = (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%H:%M")
                     if prog >= 0.35:
                         head = (f"⏰ GEÇ KALINDI [{tf}] {setup.side} — fiyat yolun "
@@ -208,20 +236,21 @@ class TelegramBot:
                               f"{setup.reason}\n(Emri ve STOP'u SEN koy — 5x)")
                     cp.say(f"TG uyarı: [{tf}] {setup.side} {setup.entry:.2f} (yol %{prog*100:.0f})")
             else:
-                a, aid = st
-                chg = (price - a.entry) / a.entry * 100 * (1 if a.side == "LONG" else -1)
-                hit = None
-                if a.side == "LONG":
-                    if price <= a.stop: hit = "STOP"
-                    elif price >= a.target: hit = "HEDEF"
-                else:
-                    if price >= a.stop: hit = "STOP"
-                    elif price <= a.target: hit = "HEDEF"
+                a, aid, ats = st
+                try:
+                    hit, exit_px, hit_time = self._resolve_hit(a, ats)
+                except Exception as e:  # noqa: BLE001 — veri hatası: sonraki tikte dene
+                    logger.warning(f"kapanış taraması hatası: {e}")
+                    continue
                 if hit:
+                    chg = ((exit_px - a.entry) / a.entry * 100
+                           * (1 if a.side == "LONG" else -1))
                     self.journal.close(aid, hit, round(chg, 3))
                     emoji = "✅" if hit == "HEDEF" else "🛑"
-                    msg = (f"{emoji} [{tf}] {hit}: {a.side} {a.entry:.2f} -> {price:.2f} "
-                           f"({chg:+.2f}% | 5x {chg * 5:+.2f}%)")
+                    saat = (hit_time + timedelta(hours=3)).strftime("%H:%M")
+                    msg = (f"{emoji} [{tf}] {hit}: {a.side} {a.entry:.2f} -> {exit_px:.2f} "
+                           f"({chg:+.2f}% | 5x {chg * 5:+.2f}%)\n"
+                           f"Değme saati: {saat} TR (mum taramasıyla tespit)")
                     if hit == "STOP":
                         cp._reentry[tf] = {
                             "side": a.side, "entry": a.entry,
@@ -274,7 +303,15 @@ class TelegramBot:
         # açık kurulumları geri yükle
         active: dict = {}
         for tf, a in (st.get("active") or {}).items():
-            active[tf] = (Setup(**a["setup"]), a["aid"])
+            ats = a.get("ts")
+            if not ats:   # eski durum dosyası: uyarı zamanını journal'dan al
+                import sqlite3
+                con = sqlite3.connect(self.journal.path)
+                row = con.execute("SELECT ts FROM alerts WHERE id=?",
+                                  (a["aid"],)).fetchone()
+                con.close()
+                ats = row[0] if row else datetime.now(timezone.utc).isoformat()
+            active[tf] = (Setup(**a["setup"]), a["aid"], ats)
 
         self._process_updates(timeout=0)   # bekleyen komutları cevapla
         try:
@@ -288,8 +325,8 @@ class TelegramBot:
             "reentry": {tf: {"side": r["side"], "entry": r["entry"],
                              "until": r["until"].isoformat()}
                         for tf, r in self.copilot._reentry.items()},
-            "active": {tf: {"setup": asdict(s), "aid": aid}
-                       for tf, (s, aid) in active.items()},
+            "active": {tf: {"setup": asdict(s), "aid": aid, "ts": ats}
+                       for tf, (s, aid, ats) in active.items()},
         }, ensure_ascii=False), encoding="utf-8")
         logger.info("tek geçiş bitti, durum kaydedildi.")
 
