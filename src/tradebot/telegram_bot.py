@@ -195,6 +195,70 @@ class TelegramBot:
                 logger.warning(f"poll hatası: {e}")
                 time.sleep(5)
 
+    def rapor_text(self) -> str:
+        """10 dk'lık kısa rapor: fiyat, açık kâğıt işlemler, plan durumları."""
+        price = self.copilot.feed.mark_price(self.symbol)
+        saat = (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%H:%M")
+        lines = [f"🕙 {saat} TR — {self.symbol} {price:.2f}"]
+        if self._active:
+            for tf, (s, _aid, _ats) in self._active.items():
+                chg = ((price - s.entry) / s.entry * 100
+                       * (1 if s.side == "LONG" else -1))
+                lines.append(f"📌 [{tf}] {s.side} @{s.entry:.2f} → {chg:+.2f}% "
+                             f"(5x {chg * 5:+.2f}%)  stop {s.stop:.2f} hedef {s.target:.2f}")
+        else:
+            lines.append("📌 Açık kâğıt işlem yok.")
+        for tf in PLANS:
+            try:
+                setup, status = self.copilot.analyze(tf)
+                lines.append(f"[{tf}] " + ("🔔 kurulum VAR — uyarı ayrıca geldi"
+                                           if setup else status))
+            except Exception as e:  # noqa: BLE001
+                lines.append(f"[{tf}] analiz hatası: {e}")
+        return "\n".join(lines)
+
+    # ---- durum dosyası (hem --once hem sürekli mod kullanır) ----------------
+    def _load_state(self) -> dict:
+        """STATE_FILE'dan offset/özet/nöbet/açık işlemleri yükler; active döner."""
+        st: dict = {}
+        if STATE_FILE.exists():
+            try:
+                st = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                pass
+        self._offset = st.get("offset", 0)
+        self._last_daily = st.get("last_daily")
+        ren: dict = {}
+        for tf, r in (st.get("reentry") or {}).items():
+            until = datetime.fromisoformat(r["until"])
+            if until > datetime.now(timezone.utc):
+                ren[tf] = {"side": r["side"], "entry": r["entry"], "until": until}
+        self.copilot._reentry = ren
+        active: dict = {}
+        for tf, a in (st.get("active") or {}).items():
+            ats = a.get("ts")
+            if not ats:   # eski durum dosyası: uyarı zamanını journal'dan al
+                import sqlite3
+                con = sqlite3.connect(self.journal.path)
+                row = con.execute("SELECT ts FROM alerts WHERE id=?",
+                                  (a["aid"],)).fetchone()
+                con.close()
+                ats = row[0] if row else datetime.now(timezone.utc).isoformat()
+            active[tf] = (Setup(**a["setup"]), a["aid"], ats)
+        self._active = active   # /durum açık işlemleri görsün
+        return active
+
+    def _save_state(self, active: dict) -> None:
+        STATE_FILE.write_text(json.dumps({
+            "offset": self._offset,
+            "last_daily": self._last_daily,
+            "reentry": {tf: {"side": r["side"], "entry": r["entry"],
+                             "until": r["until"].isoformat()}
+                        for tf, r in self.copilot._reentry.items()},
+            "active": {tf: {"setup": asdict(s), "aid": aid, "ts": ats}
+                       for tf, (s, aid, ats) in active.items()},
+        }, ensure_ascii=False), encoding="utf-8")
+
     # ---- copilot tek geçiş (hem sürekli mod hem --once bunu kullanır) -------
     def _resolve_hit(self, a: Setup, ats: str):
         """Uyarı anından bu yana 5m mumlarını tarar: stop/hedef değdi mi?
@@ -295,13 +359,17 @@ class TelegramBot:
             self.send("🌅 Günlük özet\n\n" + self.durum_text() +
                       "\n\n" + self.journal_text())
 
-    def copilot_loop(self, interval: int = 60) -> None:
-        active: dict[str, tuple] = {}
-        self._active = active
-        logger.info("Copilot döngüsü başladı (telegram modu).")
+    def copilot_loop(self, interval: int = 60, report_sec: int = 600) -> None:
+        active = self._load_state()   # PC yeniden başlasa da açık işlemler kaybolmaz
+        logger.info(f"Copilot döngüsü başladı ({len(active)} açık işlem yüklendi).")
+        last_report = 0.0
         while True:
             try:
                 self._tick(active)
+                if time.time() - last_report >= report_sec:   # 10 dk'da bir rapor
+                    last_report = time.time()
+                    self.send(self.rapor_text())
+                self._save_state(active)
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"copilot tick hatası: {e}")
             time.sleep(interval)
@@ -313,50 +381,13 @@ class TelegramBot:
         GitHub Actions cron'u (ör. 15 dk'da bir) bunu çağırır; PC kapalıyken
         bedava 7/24 çalışma yolu. Bedel: 15 dk'ya kadar gecikme.
         """
-        st: dict = {}
-        if STATE_FILE.exists():
-            try:
-                st = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-            except Exception:  # noqa: BLE001
-                pass
-        self._offset = st.get("offset", 0)
-        self._last_daily = st.get("last_daily")
-        # ikinci-giriş nöbetlerini geri yükle
-        ren: dict = {}
-        for tf, r in (st.get("reentry") or {}).items():
-            until = datetime.fromisoformat(r["until"])
-            if until > datetime.now(timezone.utc):
-                ren[tf] = {"side": r["side"], "entry": r["entry"], "until": until}
-        self.copilot._reentry = ren
-        # açık kurulumları geri yükle
-        active: dict = {}
-        for tf, a in (st.get("active") or {}).items():
-            ats = a.get("ts")
-            if not ats:   # eski durum dosyası: uyarı zamanını journal'dan al
-                import sqlite3
-                con = sqlite3.connect(self.journal.path)
-                row = con.execute("SELECT ts FROM alerts WHERE id=?",
-                                  (a["aid"],)).fetchone()
-                con.close()
-                ats = row[0] if row else datetime.now(timezone.utc).isoformat()
-            active[tf] = (Setup(**a["setup"]), a["aid"], ats)
-        self._active = active   # /durum açık işlemleri görsün
-
+        active = self._load_state()
         self._process_updates(timeout=0)   # bekleyen komutları cevapla
         try:
             self._tick(active)
         except Exception as e:  # noqa: BLE001
             logger.warning(f"tick hatası: {e}")
-
-        STATE_FILE.write_text(json.dumps({
-            "offset": self._offset,
-            "last_daily": self._last_daily,
-            "reentry": {tf: {"side": r["side"], "entry": r["entry"],
-                             "until": r["until"].isoformat()}
-                        for tf, r in self.copilot._reentry.items()},
-            "active": {tf: {"setup": asdict(s), "aid": aid, "ts": ats}
-                       for tf, (s, aid, ats) in active.items()},
-        }, ensure_ascii=False), encoding="utf-8")
+        self._save_state(active)
         logger.info("tek geçiş bitti, durum kaydedildi.")
 
     def run(self) -> None:
