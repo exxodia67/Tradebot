@@ -904,3 +904,4 @@
 2026-07-04 02:47:09  ETHUSDT 1759.54  ·  15m: LONG ADX40 RSI61 | dizilim ✓ fiyat-MA7 ✓ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
 2026-07-04 02:47:41  ETHUSDT 1758.99  ·  15m: LONG ADX40 RSI60 | dizilim ✓ fiyat-MA7 ✓ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
 2026-07-04 02:48:13  ETHUSDT 1759.23  ·  15m: LONG ADX40 RSI61 | dizilim ✓ fiyat-MA7 ✓ · gece dilimi (23UTC) kötü — BEKLE  |  1h: SHORT ADX61 RSI69 | dizilim ✗ fiyat-MA7 ✗ · 1h tetik yok (dizilim bozuk) — BEKLE
+TG uyarı: [15m] LONG 1754.45
