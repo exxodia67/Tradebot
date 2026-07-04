@@ -47,6 +47,10 @@ exit /b 1
 :bulundu
 echo Python bulundu: %PYEXE%
 
+if exist .venv if not exist .venv\Scripts\python.exe (
+  echo Bozuk .venv bulundu, siliniyor...
+  rmdir /s /q .venv
+)
 if not exist .venv (
   echo [1/3] Sanal ortam kuruluyor...
   "%PYEXE%" %PYARG% -m venv .venv
@@ -58,9 +62,14 @@ if not exist .venv (
 )
 
 echo [2/3] Bagimliliklar kuruluyor... (ilk sefer 1-2 dk surer)
-.venv\Scripts\python -m pip install -e . --quiet
+.venv\Scripts\python -m pip install --upgrade pip >nul 2>nul
+.venv\Scripts\python -m pip install -e . >kurulum_log.txt 2>&1
 if errorlevel 1 (
-  echo [HATA] Kurulum basarisiz. Internet baglantisini kontrol et.
+  echo [HATA] Kurulum basarisiz. Hata dokumu:
+  echo ------------------------------------------------
+  type kurulum_log.txt
+  echo ------------------------------------------------
+  echo Bu ekranin fotosunu at / kurulum_log.txt dosyasini gonder.
   pause
   exit /b 1
 )
