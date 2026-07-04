@@ -110,16 +110,73 @@ class TelegramBot:
             lines.append("📌 Açık kâğıt işlem yok — kurulum bekleniyor.")
         return "\n".join(lines)
 
+    def _bias(self, trend_tf: str) -> str | None:
+        d = self.copilot.feed.klines(self.symbol, trend_tf, 120)
+        h7, h25, h99 = (sma(d["close"], q).iloc[-1] for q in (7, 25, 99))
+        return "LONG" if h7 > h25 > h99 else "SHORT" if h7 < h25 < h99 else None
+
     def analiz_text(self) -> str:
-        parts = ["🔎 Plan değerlendirmesi:"]
+        feed = self.copilot.feed
+        price = feed.mark_price(self.symbol)
+        saat = (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%H:%M")
+        parts = [f"🔎 {self.symbol} {price:.2f} — plan değerlendirmesi ({saat} TR)"]
+
+        # 4h çerçeve — yön haritası (240g testte 4h GİRİŞTE edge yoktu; pusula olarak var)
+        try:
+            d4 = feed.klines(self.symbol, "4h", 120)
+            f7, f25, f99 = (sma(d4["close"], q).iloc[-1] for q in (7, 25, 99))
+            a4 = float(adx(d4, 14).iloc[-1])
+            r4 = float(rsi(d4["close"], 14).iloc[-1])
+            res4 = float(d4["high"].iloc[-42:-2].max())   # son ~7 gün
+            sup4 = float(d4["low"].iloc[-42:-2].min())
+            diz4 = ("yukarı ⬆️" if f7 > f25 > f99
+                    else "aşağı ⬇️" if f7 < f25 < f99 else "karışık ↔️")
+            parts.append(f"\n🧭 4h çerçeve: {diz4} · ADX{a4:.0f} RSI{r4:.0f}\n"
+                         f"   direnç {res4:.0f} / destek {sup4:.0f} · "
+                         f"MA25 {f25:.0f} (fiyat {'üstünde ✓' if price > f25 else 'altında ✗'})")
+        except Exception as e:  # noqa: BLE001
+            parts.append(f"\n🧭 4h çerçeve okunamadı: {e}")
+
         for tf in PLANS:
-            setup, status = self.copilot.analyze(tf)
+            p = PLANS[tf]
+            baslik = f"\n[{tf}] plan — üst filtre {p['trend']}, hedef {p['rr']:.0f}R"
+            try:
+                setup, status = self.copilot.analyze(tf)
+            except Exception as e:  # noqa: BLE001
+                parts.append(f"{baslik}\n   analiz hatası: {e}")
+                continue
             if setup:
-                parts.append(f"\n[{tf}] 🔔 {setup.side}\n"
-                             f"giriş {setup.entry:.2f} stop {setup.stop:.2f} "
-                             f"hedef {setup.target:.2f}\n{setup.reason}")
-            else:
-                parts.append(f"[{tf}] {status}")
+                rp = abs(setup.entry - setup.stop) / setup.entry * 100
+                tp = abs(setup.target - setup.entry) / setup.entry * 100
+                parts.append(
+                    f"{baslik}\n🔔 KURULUM VAR: {setup.side}\n"
+                    f"   giriş {setup.entry:.2f} · stop {setup.stop:.2f} (-%{rp:.2f}) "
+                    f"· hedef {setup.target:.2f} (+%{tp:.2f})\n"
+                    f"   5x ile: stop -%{rp * 5:.1f} / hedef +%{tp * 5:.1f}\n"
+                    f"   {setup.reason}")
+                continue
+            # kurulum yok: neden bekliyor + KURULSA pozisyon taslağı
+            satir = [f"{baslik}", f"⏳ {status}"]
+            try:
+                bias = self._bias(p["trend"])
+                if bias:
+                    d = feed.klines(self.symbol, tf, 120)
+                    atr_v = float(atr(d, 14).iloc[-1])
+                    sd = atr_v * self.copilot.atr_stop_mult
+                    stop = price - sd if bias == "LONG" else price + sd
+                    tgt = (price + sd * p["rr"] if bias == "LONG"
+                           else price - sd * p["rr"])
+                    rp = sd / price * 100
+                    tp = rp * p["rr"]
+                    satir.append(
+                        f"   Kurulursa taslak: {bias} giriş ~{price:.2f} · "
+                        f"stop {stop:.2f} (-%{rp:.2f}) · hedef {tgt:.2f} (+%{tp:.2f})\n"
+                        f"   5x ile: stop -%{rp * 5:.1f} / hedef +%{tp * 5:.1f} · R/R 1:{p['rr']:.0f}")
+                else:
+                    satir.append(f"   Taslak yok: {p['trend']} yönü belirsiz, plan yön seçemiyor.")
+            except Exception:  # noqa: BLE001
+                pass
+            parts.append("\n".join(satir))
         return "\n".join(parts)
 
     def journal_text(self) -> str:
