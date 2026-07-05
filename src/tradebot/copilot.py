@@ -26,6 +26,9 @@ Kural seti:
                                replay: 2/2 hedef, 5x +%14)
   8) GECE filtresi          -> 15m planında 20-24 UTC uyarı YOK (iki pencerede en
                                kötü dilim). --no-quiet ile kapatılabilir.
+  8b) AKŞAM+SICAK RSI       -> 15m LONG, 18-19 UTC + RSI>=65: giriş YOK. 90g:
+                               31 işlem win %6.5 ort -%0.56 — işlem geceye sarkıp
+                               ölüyor (05.07 21:45 TR stopu bu profildi).
   9) İKİNCİ GİRİŞ (reclaim) -> STOP sonrası 4 saat içinde fiyat orijinal girişi
                                geri alırsa + üst TF yön sürüyorsa + ADX>=25:
                                tekrar uyarı (test: win %48, ort +%0.22). Giriş TF
@@ -180,6 +183,14 @@ class Copilot:
             return None, f"{read} · MA'lar yapışık %{sep_pct:.2f} (whipsaw) — BEKLE"
         if self.vol_mult > 0 and vol_ratio < self.vol_mult:  # varsayılan kapalı
             return None, f"{read} · hacim zayıf {vol_ratio:.2f}x — BEKLE"
+        # AKŞAM+SICAK RSI (05.07 stopu sonrası eklendi): 18-19 UTC girişi geceye
+        # sarkıyor; 90g testte RSI>=65 + saat>=18 UTC LONG: 31 işlem, win %6.5,
+        # ort -%0.56. Gece filtresi 20'de başlıyor ama bu profil 2 saat önce ölüyor.
+        if (not self.no_quiet and tf == "15m" and bias == "LONG"
+                and hour in (18, 19) and rsi_v >= 65):
+            return None, (f"{read} · akşam {(hour + 3) % 24:02d}:00 TR + RSI{rsi_v:.0f} "
+                          f"sıcak — 90g testte bu profil 31 işlemde win %6.5 "
+                          f"(geceye sarkıp stop yiyor) — BEKLE")
 
         def mk(side: str, room: float, tag: str) -> Setup:
             stop = price - stop_dist if side == "LONG" else price + stop_dist
