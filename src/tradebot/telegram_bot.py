@@ -219,7 +219,7 @@ class TelegramBot:
             except Exception:  # noqa: BLE001
                 t = r["ts"][:16]
             if r["outcome"]:
-                em = "✅" if r["outcome"] == "HEDEF" else "🛑"
+                em = {"HEDEF": "✅", "STOP": "🛑", "BE": "😐"}.get(r["outcome"], "🛑")
                 out.append(f"{em} {t} {r['side']} {r['entry']:.2f} -> "
                            f"{r['outcome']} {r['pnl_pct']:+.2f}% "
                            f"(5x {r['pnl_pct'] * 5:+.1f}%)")
@@ -356,19 +356,24 @@ class TelegramBot:
         mins = (datetime.now(timezone.utc) - since).total_seconds() / 60
         limit = min(1000, max(3, int(mins / 5) + 3))
         d = self.copilot.feed.klines(self.symbol, "5m", limit)
-        for _, row in d.iterrows():
+        stop, armed = a.stop, False   # BE: +1.5R görülünce stop girişe (kötümser:
+        for _, row in d.iterrows():   # aynı mumda önce stop bakılır, BE sonraki mumda)
             if row["open_time"] < since:
                 continue
             if a.side == "LONG":
-                if row["low"] <= a.stop:
-                    return "STOP", a.stop, row["open_time"]
+                if row["low"] <= stop:
+                    return ("BE" if armed else "STOP"), stop, row["open_time"]
                 if row["high"] >= a.target:
                     return "HEDEF", a.target, row["open_time"]
+                if a.be_at and not armed and row["high"] >= a.be_at:
+                    armed, stop = True, a.entry
             else:
-                if row["high"] >= a.stop:
-                    return "STOP", a.stop, row["open_time"]
+                if row["high"] >= stop:
+                    return ("BE" if armed else "STOP"), stop, row["open_time"]
                 if row["low"] <= a.target:
                     return "HEDEF", a.target, row["open_time"]
+                if a.be_at and not armed and row["low"] <= a.be_at:
+                    armed, stop = True, a.entry
         return None, None, None
 
     def _tick(self, active: dict) -> None:
@@ -405,10 +410,12 @@ class TelegramBot:
                         head = (f"🔔 KURULUM [{tf}] {setup.side}  ({saat} TR)\n"
                                 f"Tazelik: yolun %{prog * 100:.0f}'i gitti "
                                 f"(kural: %35 üstüyse girilmez)")
+                    be_satir = (f"BE kuralı: fiyat {setup.be_at:.2f} olursa STOP'u "
+                                f"girişe çek (haber vereceğim)\n" if setup.be_at else "")
                     self.send(f"{head}\n"
                               f"Giriş: {setup.entry:.2f}  Şu an: {price:.2f}\n"
                               f"Stop: {setup.stop:.2f}\nHedef: {setup.target:.2f}\n"
-                              f"{setup.reason}\n(Emri ve STOP'u SEN koy — 5x)")
+                              f"{be_satir}{setup.reason}\n(Emri ve STOP'u SEN koy — 5x)")
                     cp.say(f"TG uyarı: [{tf}] {setup.side} {setup.entry:.2f} (yol %{prog*100:.0f})")
             else:
                 a, aid, ats = st
@@ -421,9 +428,10 @@ class TelegramBot:
                     chg = ((exit_px - a.entry) / a.entry * 100
                            * (1 if a.side == "LONG" else -1))
                     self.journal.close(aid, hit, round(chg, 3))
-                    emoji = "✅" if hit == "HEDEF" else "🛑"
+                    emoji = {"HEDEF": "✅", "STOP": "🛑", "BE": "😐"}.get(hit, "❔")
+                    ad = "BAŞABAŞ (stop girişe çekilmişti)" if hit == "BE" else hit
                     saat = (hit_time + timedelta(hours=3)).strftime("%H:%M")
-                    msg = (f"{emoji} [{tf}] {hit}: {a.side} {a.entry:.2f} -> {exit_px:.2f} "
+                    msg = (f"{emoji} [{tf}] {ad}: {a.side} {a.entry:.2f} -> {exit_px:.2f} "
                            f"({chg:+.2f}% | 5x {chg * 5:+.2f}%)\n"
                            f"Değme saati: {saat} TR (mum taramasıyla tespit)")
                     if hit == "STOP":
@@ -434,6 +442,13 @@ class TelegramBot:
                     self.send(msg)
                     cp.say(f"TG kapanış: {msg}")
                     active.pop(tf, None)
+                elif a.be_at and not a.be_armed:
+                    # açık işlem +1.5R'ye ulaştıysa: stopu girişe çek uyarısı (bir kez)
+                    if (a.side == "LONG" and price >= a.be_at) or \
+                       (a.side == "SHORT" and price <= a.be_at):
+                        a.be_armed = True
+                        self.send(f"📐 [{tf}] {a.be_at:.2f} görüldü — STOP'u girişe "
+                                  f"({a.entry:.2f}) çek. Bundan sonrası en kötü başabaş.")
 
         # günlük özet 07:00 UTC
         now = datetime.now(timezone.utc)

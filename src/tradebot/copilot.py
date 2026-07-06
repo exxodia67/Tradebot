@@ -33,6 +33,9 @@ Kural seti:
                                geri alırsa + üst TF yön sürüyorsa + ADX>=25:
                                tekrar uyarı (test: win %48, ort +%0.22). Giriş TF
                                dizilimi ve direnç filtresi BEKLENMEZ.
+  10) BREAKEVEN (sadece 15m) -> fiyat +1.5R'ye değince stop girişe çekilir.
+                               90g: toplamı %+5.4'ten %+13.1'e çıkardı (n=101).
+                               1h planında ZARARLI çıktı — orada kapalı.
 Kaynak: ogrenilen_kurallar.md (walk-forward, komisyon dahil, kötümser sayım).
 
 Her uyarıda giriş-anı özellikleri (RSI, hacim oranı, baraja mesafe, saat) journal'a
@@ -60,10 +63,13 @@ from tradebot.journal import Journal
 #                              sessiz saatler UTC)
 PLANS: dict[str, dict] = {
     "15m": {"trend": "1h", "rr": 2.0, "adx_min": 20.0, "sr_win": 96,
-            "quiet": (20, 21, 22, 23)},
+            "quiet": (20, 21, 22, 23), "be": 1.5},
     "1h":  {"trend": "1d", "rr": 3.0, "adx_min": 25.0, "sr_win": 24,
-            "quiet": ()},   # 1h için gece kanıtı zayıf (n küçük) — filtre yok
+            "quiet": (), "be": 0.0},   # 1h: BE testte ZARARLI (3R'ye nefes lazım)
 }
+# "be": breakeven tetiği (R katı). 15m 90g testi: BE yok toplam %+5.4,
+# BE-1.5R %+13.1 (n=101). İki yarıda tutarlı DEĞİL (H1 -2.0→-4.7, H2 +7.4→+17.8)
+# — toplamda net pozitif olduğu ve tam-stopu kestiği için açık; garanti değildir.
 
 
 @dataclass
@@ -81,6 +87,9 @@ class Setup:
     room_atr: float = 0.0
     sep_pct: float = 0.0
     hour: int = 0
+    # breakeven: fiyat be_at'a değince stop girişe çekilir (0 = kapalı)
+    be_at: float = 0.0
+    be_armed: bool = False
 
 
 class Copilot:
@@ -204,13 +213,16 @@ class Copilot:
         def mk(side: str, room: float, tag: str) -> Setup:
             stop = price - stop_dist if side == "LONG" else price + stop_dist
             target = price + target_dist if side == "LONG" else price - target_dist
+            be = p.get("be", 0.0)
+            be_at = (price + stop_dist * be if side == "LONG"
+                     else price - stop_dist * be) if be else 0.0
             return Setup(side, price, stop, target, adx_v,
                          f"[{tf}] {tag} + {p['trend']} trend + ADX{adx_v:.0f} "
                          f"vol{vol_ratio:.1f}x RSI{rsi_v:.0f} yer{room / atr_v:.1f}ATR "
                          f"(hedef {p['rr']:.0f}R)",
                          tf=tf, rsi=rsi_v, vol_ratio=vol_ratio,
                          room_atr=room / atr_v if atr_v else 0.0,
-                         sep_pct=sep_pct, hour=hour)
+                         sep_pct=sep_pct, hour=hour, be_at=be_at)
 
         open_sky_up = price > resistance     # tüm dirençlerin üstü
         open_sky_dn = price < support        # tüm desteklerin altı
@@ -291,11 +303,14 @@ class Copilot:
         stop = price - stop_dist if side == "LONG" else price + stop_dist
         target = price + stop_dist * p["rr"] if side == "LONG" else price - stop_dist * p["rr"]
         self._reentry.pop(tf, None)
+        be = p.get("be", 0.0)
+        be_at = (price + stop_dist * be if side == "LONG"
+                 else price - stop_dist * be) if be else 0.0
         return Setup(side, price, stop, target, adx_v,
                      f"[{tf}] İKİNCİ GİRİŞ: stop avı sonrası {ra['entry']:.2f} geri "
                      f"alındı, {p['trend']} yön sürüyor, ADX{adx_v:.0f}",
                      tf=tf, rsi=rsi_v, vol_ratio=0.0, room_atr=0.0,
-                     sep_pct=abs(m7 - m25) / price * 100, hour=now.hour)
+                     sep_pct=abs(m7 - m25) / price * 100, hour=now.hour, be_at=be_at)
 
     # ---- döngü ----------------------------------------------------------
     def run(self, interval: int = 30) -> None:
@@ -335,12 +350,19 @@ class Copilot:
                     else:
                         a, aid = st
                         chg = (price - a.entry) / a.entry * 100 * (1 if a.side == "LONG" else -1)
+                        # breakeven: +be R'ye değdiyse stop girişe çekilir
+                        if a.be_at and not a.be_armed and (
+                                price >= a.be_at if a.side == "LONG" else price <= a.be_at):
+                            a.be_armed = True
+                            a.stop = a.entry
+                            self.say(f"{ts}  >>> [{tf}] BREAKEVEN: {a.be_at:.2f} görüldü — "
+                                     f"STOP girişe ({a.entry:.2f}) çekildi. Gerçek emrinde sen de çek!")
                         hit = None
                         if a.side == "LONG":
-                            if price <= a.stop: hit = "STOP"
+                            if price <= a.stop: hit = "BE" if a.be_armed else "STOP"
                             elif price >= a.target: hit = "HEDEF"
                         else:
-                            if price >= a.stop: hit = "STOP"
+                            if price >= a.stop: hit = "BE" if a.be_armed else "STOP"
                             elif price <= a.target: hit = "HEDEF"
                         if hit:
                             self.journal.close(aid, hit, round(chg, 3))
@@ -350,7 +372,7 @@ class Copilot:
                             s = self.journal.summary()
                             self.say(f"     journal: {s['kapanan']} kapanan, win %{s['win_rate']}, "
                                      f"toplam {s['toplam_pnl_pct']:+.2f}%")
-                            if hit == "STOP":  # stop avı olabilir — reclaim nöbeti
+                            if hit == "STOP":  # stop avı olabilir — reclaim nöbeti (BE değil)
                                 self._reentry[tf] = {
                                     "side": a.side, "entry": a.entry,
                                     "until": datetime.now(timezone.utc) + timedelta(hours=4)}
@@ -382,6 +404,9 @@ class Copilot:
         self.say(f"  Hedef : {s.target:.2f}  ({rr:.0f}R)")
         self.say(f"  Teyit : RSI {s.rsi:.0f} · hacim {s.vol_ratio:.1f}x · "
                  f"baraj {s.room_atr:.1f} ATR uzakta")
+        if s.be_at:
+            self.say(f"  BE    : fiyat {s.be_at:.2f} olursa STOP'u girişe çek "
+                     f"(90g test: toplam kârı 2x'ledi)")
         self.say(f"  Neden : {s.reason}")
         self.say(f"  (Emri ve STOP'u Binance'e SEN koy. Kaldıraç {self.leverage}x.)")
         self.say("=" * 60 + "\n")

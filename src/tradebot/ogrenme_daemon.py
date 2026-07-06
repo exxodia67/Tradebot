@@ -174,17 +174,23 @@ class OgrenmeDaemon:
                 if not s:
                     continue
                 hit, exit_px, hit_t = None, None, None
+                stop, armed = s.stop, False   # BE kuralı botla birebir aynı
                 for _, r in d5[d5["open_time"] > t].iterrows():
-                    stop_hit = (r["low"] <= s.stop if s.side == "LONG"
-                                else r["high"] >= s.stop)
+                    stop_hit = (r["low"] <= stop if s.side == "LONG"
+                                else r["high"] >= stop)
                     tgt_hit = (r["high"] >= s.target if s.side == "LONG"
                                else r["low"] <= s.target)
                     if stop_hit:                       # aynı mumda ikisi de: kötümser
-                        hit, exit_px, hit_t = "STOP", s.stop, r["open_time"]
+                        hit = "BE" if armed else "STOP"
+                        exit_px, hit_t = stop, r["open_time"]
                         break
                     if tgt_hit:
                         hit, exit_px, hit_t = "HEDEF", s.target, r["open_time"]
                         break
+                    if s.be_at and not armed and (
+                            r["high"] >= s.be_at if s.side == "LONG"
+                            else r["low"] <= s.be_at):
+                        armed, stop = True, s.entry
                 saat_tr = f"{(t + timedelta(hours=3)):%d.%m %H:%M} TR"
                 yon = "alış (LONG)" if s.side == "LONG" else "satış (SHORT)"
                 if hit:
@@ -193,9 +199,10 @@ class OgrenmeDaemon:
                     toplam += chg
                     kazanc += chg > 0
                     kayip += chg <= 0
-                    em = "✅" if hit == "HEDEF" else "🛑"
+                    em = {"HEDEF": "✅", "STOP": "🛑", "BE": "😐"}.get(hit, "❔")
+                    ad = "BAŞABAŞ" if hit == "BE" else hit
                     out.append(f"{em} {saat_tr} [{tf}] {yon} {s.entry:.0f}$ → "
-                               f"{hit} %{chg:+.2f} (5x %{chg * 5:+.1f})")
+                               f"{ad} %{chg:+.2f} (5x %{chg * 5:+.1f})")
                     busy_end = hit_t
                 else:
                     out.append(f"⏳ {saat_tr} [{tf}] {yon} {s.entry:.0f}$ → "
