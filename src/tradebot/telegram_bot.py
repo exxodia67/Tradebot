@@ -24,6 +24,7 @@ Raspberry Pi) kopyala, aynı komutu orada çalıştır. Kod değişikliği gerek
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 import threading
 import time
@@ -33,14 +34,22 @@ from datetime import datetime, timedelta, timezone
 import requests
 from loguru import logger
 
-from tradebot.config import ROOT, Secrets
+from tradebot.config import ROOT, STATE_DIR, Secrets
 from tradebot.copilot import PLANS, Copilot, Setup
 from tradebot.indicators import adx, atr, rsi, sma
 from tradebot.journal import Journal
 
 API = "https://api.telegram.org/bot{token}/{method}"
-CHAT_FILE = ROOT / "telegram_chat.json"
-STATE_FILE = ROOT / "tg_state.json"    # --once modunda durum (GitHub Actions)
+# Durum dosyaları sabit ev-klasöründe — kurulum klasörü değişse de kaybolmaz.
+CHAT_FILE = STATE_DIR / "telegram_chat.json"
+STATE_FILE = STATE_DIR / "tg_state.json"
+for _new, _old in ((CHAT_FILE, ROOT / "telegram_chat.json"),
+                   (STATE_FILE, ROOT / "tg_state.json")):
+    if not _new.exists() and _old.exists():
+        try:
+            shutil.copy2(_old, _new)   # eski kurulumdan tek seferlik taşıma
+        except Exception:  # noqa: BLE001
+            pass
 TFS = ("5m", "15m", "1h", "4h", "1d")   # /durum çok-TF analizi
 
 
@@ -198,7 +207,8 @@ class TelegramBot:
 
     def journal_text(self) -> str:
         s = self.journal.summary()
-        out = [f"📒 Journal: {s['kapanan']} kapanan işlem",
+        out = [f"📒 Journal — botun GERÇEK uyarıları (simülasyonlar buraya girmez)",
+               f"{s['kapanan']} kapanan işlem",
                f"win %{s['win_rate']}  ort %{s['ort_pnl_pct']}  "
                f"toplam %{s['toplam_pnl_pct']} (5x %{s['toplam_pnl_pct'] * 5:+.2f})",
                ""]
@@ -433,14 +443,14 @@ class TelegramBot:
             self.send("🌅 Günlük özet\n\n" + self.durum_text() +
                       "\n\n" + self.journal_text())
 
-    def copilot_loop(self, interval: int = 60, report_sec: int = 600) -> None:
+    def copilot_loop(self, interval: int = 60, report_sec: int = 3600) -> None:
         active = self._load_state()   # PC yeniden başlasa da açık işlemler kaybolmaz
         logger.info(f"Copilot döngüsü başladı ({len(active)} açık işlem yüklendi).")
         last_report = 0.0
         while True:
             try:
                 self._tick(active)
-                # öğrenme modülü çalışıyorsa 10 dk raporunu O atar (tek mesaj olsun)
+                # öğrenme modülü çalışıyorsa saatlik raporu O atar (tek mesaj olsun)
                 if (not getattr(self, "_has_learn", False)
                         and time.time() - last_report >= report_sec):
                     last_report = time.time()
@@ -479,8 +489,8 @@ class TelegramBot:
         except Exception as e:  # noqa: BLE001
             logger.warning(f"öğrenme modülü başlatılamadı: {e}")
         if self.chat_id:
-            self.send("🤖 Co-pilot başladı: anlık kurulum uyarısı + kâğıt işlem "
-                      "takibi + 10 dk'da bir öğrenme raporu — hepsi bu pencerede. "
+            self.send("🤖 Co-pilot başladı: kurulum çıkınca ANINDA uyarı + kâğıt işlem "
+                      "takibi + SAATTE BİR sade rapor — hepsi bu pencerede. "
                       "/durum ile kontrol et.")
         self.poll_loop()   # ana thread komutları dinler
 

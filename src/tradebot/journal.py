@@ -9,12 +9,13 @@ Rapor:  python -m tradebot.journal
 """
 from __future__ import annotations
 
+import shutil
 import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from tradebot.config import ROOT
+from tradebot.config import ROOT, STATE_DIR
 
 # Giriş anında saklanan ek özellikler (sonradan öğrenme analizi için)
 _FEATURES = ("rsi", "vol_ratio", "room_atr", "sep_pct", "hour")
@@ -22,7 +23,16 @@ _FEATURES = ("rsi", "vol_ratio", "room_atr", "sep_pct", "hour")
 
 class Journal:
     def __init__(self, path: Path | str | None = None):
-        self.path = str(path or ROOT / "copilot_journal.db")
+        if path is None:
+            # Sabit ev-klasörü: bot hangi klasörden çalışırsa çalışsın TEK karne.
+            path = STATE_DIR / "copilot_journal.db"
+            old = ROOT / "copilot_journal.db"
+            if not path.exists() and old.exists():
+                try:
+                    shutil.copy2(old, path)   # eski kurulumdaki kayıtları taşı
+                except Exception:  # noqa: BLE001
+                    path = old                # taşınamazsa eskisiyle devam
+        self.path = str(path)
         con = sqlite3.connect(self.path)
         con.execute(
             """CREATE TABLE IF NOT EXISTS alerts(

@@ -130,12 +130,21 @@ class Copilot:
     def _plan_adx_min(self, tf: str) -> float:
         return self.adx_overrides.get(tf, PLANS[tf]["adx_min"])
 
-    def analyze(self, tf: str) -> tuple[Setup | None, str]:
-        """Verilen plan (giriş TF) için kural setini uygular."""
+    def analyze(self, tf: str, d_hi=None, d_lo=None, price=None,
+                now=None) -> tuple[Setup | None, str]:
+        """Verilen plan (giriş TF) için kural setini uygular.
+
+        d_hi/d_lo/price/now verilirse geçmiş bir mum üzerinde çalışır —
+        saatlik rapordaki "dün açsaydık ne olurdu" simülasyonu AYNI kuralları
+        kullanır (kural kopyası yok, sapma yok).
+        """
         p = PLANS[tf]
-        d_hi = self._tf(p["trend"])
-        d_lo = self._tf(tf)
-        price = self.feed.mark_price(self.symbol)
+        if d_hi is None:
+            d_hi = self._tf(p["trend"])
+        if d_lo is None:
+            d_lo = self._tf(tf)
+        if price is None:
+            price = self.feed.mark_price(self.symbol)
 
         # üst TF yön
         h7, h25, h99 = (sma(d_hi["close"], q).iloc[-1] for q in (7, 25, 99))
@@ -162,7 +171,7 @@ class Copilot:
         # son 2 barın dip/tepesi (pullback tetiği için)
         recent_low = float(d_lo["low"].iloc[-2:].min())
         recent_high = float(d_lo["high"].iloc[-2:].max())
-        hour = datetime.now(timezone.utc).hour
+        hour = (now or datetime.now(timezone.utc)).hour
         stop_dist = atr_v * self.atr_stop_mult
         target_dist = stop_dist * p["rr"]
 

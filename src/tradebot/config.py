@@ -18,6 +18,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Proje kökü: .../Tradebot
 ROOT = Path(__file__).resolve().parents[2]
 
+# Kalıcı durum (journal, telegram durumu): kurulum klasöründen BAĞIMSIZ.
+# Neden: bot farklı klasörlere kurulunca her kopya kendi journal'ını tutuyordu —
+# işlemler "kayboluyordu" (06.07: gece stopları /journal'da görünmedi).
+STATE_DIR = Path.home() / ".tradebot"
+STATE_DIR.mkdir(exist_ok=True)
+
 
 class Secrets(BaseSettings):
     """`.env` dosyasından okunan gizli değerler."""
