@@ -247,6 +247,13 @@ class OgrenmeDaemon:
                 lines.append(f"{ad}: {self._trend_soz(tf)}")
             except Exception as e:  # noqa: BLE001
                 lines.append(f"{ad}: okunamadı ({e})")
+        try:
+            from tradebot.tradingview import tv_ozet_satiri
+            tv = tv_ozet_satiri(self.symbol)
+            if tv:
+                lines.append(tv + "  (detay: /tv)")
+        except Exception:  # noqa: BLE001
+            pass
 
         lines.append("\n💼 AÇIK KÂĞIT İŞLEM")
         aktif = getattr(self.bot, "_active", {}) if self.bot is not None else {}

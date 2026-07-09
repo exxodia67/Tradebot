@@ -36,6 +36,8 @@ Kural seti:
   10) BREAKEVEN (sadece 15m) -> fiyat +1.5R'ye değince stop girişe çekilir.
                                90g: toplamı %+5.4'ten %+13.1'e çıkardı (n=101).
                                1h planında ZARARLI çıktı — orada kapalı.
+  11) DİP KOVALAMA koruması -> RSI<=35 iken SHORT girişi YOK (08.07: 2 canlı stop;
+                               90g: RSI32-45 short iki yarıda da eksi, RSI>45 artı)
 Kaynak: ogrenilen_kurallar.md (walk-forward, komisyon dahil, kötümser sayım).
 
 Her uyarıda giriş-anı özellikleri (RSI, hacim oranı, baraja mesafe, saat) journal'a
@@ -209,6 +211,13 @@ class Copilot:
             return None, (f"{read} · akşam {(hour + 3) % 24:02d}:00 TR + RSI{rsi_v:.0f} "
                           f"sıcak — 90g testte bu profil 31 işlemde win %6.5 "
                           f"(geceye sarkıp stop yiyor) — BEKLE")
+        # DİP KOVALAMA koruması (08.07: RSI 27 ve 30'da iki SHORT, ikisi de stop,
+        # ilki 5 dakikada). 90g: RSI32-45 SHORT iki yarıda da eksi (-0.20/-0.20),
+        # RSI>45 SHORT iki yarıda da artı. Kanıt orta kuvvette (n küçük) ama
+        # canlı kayıplarla aynı yönde — taban 35.
+        if bias == "SHORT" and rsi_v <= 35:
+            return None, (f"{read} · RSI{rsi_v:.0f} zaten dipte — SHORT şimdi girmek "
+                          f"dip kovalamak olur (düşüş RSI>45'ken yakalanır) — BEKLE")
 
         def mk(side: str, room: float, tag: str) -> Setup:
             stop = price - stop_dist if side == "LONG" else price + stop_dist

@@ -243,9 +243,13 @@ class TelegramBot:
             return self.journal_text()
         if t.startswith("/ogren"):
             return self.journal.learn_report()
+        if t.startswith("/tv"):
+            from tradebot.tradingview import tv_text
+            return tv_text(self.symbol)
         if t.startswith("/yardim") or t.startswith("/help"):
             return ("/durum — 5m·15m·1h·4h·1d canlı tablo\n"
                     "/analiz — planlar şu an ne düşünüyor\n"
+                    "/tv — TradingView canlı AL/SAT analizi\n"
                     "/journal — işlem karnesi\n"
                     "/ogren — öğrenme raporu\n")
         return None
@@ -412,10 +416,14 @@ class TelegramBot:
                                 f"(kural: %35 üstüyse girilmez)")
                     be_satir = (f"BE kuralı: fiyat {setup.be_at:.2f} olursa STOP'u "
                                 f"girişe çek (haber vereceğim)\n" if setup.be_at else "")
+                    tv_link = (f"https://www.tradingview.com/chart/?symbol="
+                               f"BINANCE:{self.symbol}.P&interval="
+                               f"{'15' if tf == '15m' else '60'}")
                     self.send(f"{head}\n"
                               f"Giriş: {setup.entry:.2f}  Şu an: {price:.2f}\n"
                               f"Stop: {setup.stop:.2f}\nHedef: {setup.target:.2f}\n"
-                              f"{be_satir}{setup.reason}\n(Emri ve STOP'u SEN koy — 5x)")
+                              f"{be_satir}{setup.reason}\n(Emri ve STOP'u SEN koy — 5x)\n"
+                              f"Grafik: {tv_link}")
                     cp.say(f"TG uyarı: [{tf}] {setup.side} {setup.entry:.2f} (yol %{prog*100:.0f})")
             else:
                 a, aid, ats = st
