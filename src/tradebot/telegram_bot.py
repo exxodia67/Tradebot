@@ -73,12 +73,6 @@ class TelegramBot:
         self._offset = 0
         self._last_daily: str | None = None
         self._active: dict = {}   # tf -> (Setup, aid, ts) — /durum'da göstermek için
-        # TradingView nöbetçisi: görüş kategorisi değişince Telegram'a haber
-        try:
-            from tradebot.tradingview import TvWatcher
-            self._tv = TvWatcher(symbol)
-        except Exception:  # noqa: BLE001
-            self._tv = None
 
     # ---- telegram API ----------------------------------------------------
     def _api(self, method: str, **params):
@@ -389,12 +383,6 @@ class TelegramBot:
     def _tick(self, active: dict) -> None:
         cp = self.copilot
         price = cp.feed.mark_price(self.symbol)
-        if self._tv is not None:   # TradingView görüş değişiklikleri (anlık)
-            try:
-                for m in self._tv.check():
-                    self.send(m)
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"tv nöbetçisi: {e}")
         for tf in PLANS:
             st = active.get(tf)
             if st is None:

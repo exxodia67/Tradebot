@@ -11,8 +11,6 @@ Skor -1..+1: -1 güçlü sat ... +1 güçlü al (TradingView eşikleri).
 """
 from __future__ import annotations
 
-import time
-
 import requests
 
 SCAN_URL = "https://scanner.tradingview.com/crypto/scan"
@@ -101,52 +99,6 @@ def uyum_satiri(symbol: str, tf: str, side: str) -> str | None:
     else:
         isaret = "nötr"
     return f"📺 TradingView {TF_AD[tf]}: {lab} ({isaret})"
-
-
-class TvWatcher:
-    """TradingView görüşünü canlı izler; kategori değişince mesaj üretir.
-
-    Bot tick'i içinden çağrılır (check). En fazla poll_sec'te bir sorar;
-    aynı TF için min_gap_sec'ten sık uyarı üretmez (sınırda titremesin).
-    İlk okuma taban sayılır — açılışta uyarı atmaz.
-    """
-
-    def __init__(self, symbol: str = "ETHUSDT",
-                 poll_sec: int = 120, min_gap_sec: int = 900):
-        self.symbol = symbol
-        self.poll_sec = poll_sec
-        self.min_gap_sec = min_gap_sec
-        self.last: dict[str, str] = {}
-        self.last_alert: dict[str, float] = {}
-        self.last_poll = 0.0
-
-    def check(self) -> list[str]:
-        now = time.time()
-        if now - self.last_poll < self.poll_sec:
-            return []
-        self.last_poll = now
-        try:
-            r = ratings(self.symbol)
-        except Exception:  # noqa: BLE001
-            return []
-        if not r:
-            return []
-        out: list[str] = []
-        for ad, _suf in TFS:
-            v = r.get(ad)
-            if not v:
-                continue
-            lab = _kisa(v["toplam"])
-            old = self.last.get(ad)
-            self.last[ad] = lab
-            if old is None or lab == old:
-                continue
-            if now - self.last_alert.get(ad, 0.0) < self.min_gap_sec:
-                continue
-            self.last_alert[ad] = now
-            out.append(f"📺 TradingView {ad} görüşü değişti: {old} → {lab} "
-                       f"(skor {v['toplam']:+.2f}, RSI {v['rsi']:.0f})")
-        return out
 
 
 def tv_ozet_satiri(symbol: str = "ETHUSDT") -> str | None:
