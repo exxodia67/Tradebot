@@ -87,6 +87,7 @@ class TelegramBot:
     def send(self, text: str) -> None:
         if self.chat_id is None:
             return
+        text = getattr(self, "tag", "") + text   # gece nöbetçisi 🌙 öneki
         # Telegram 4096 sınırı — uzunsa böl
         for i in range(0, len(text), 3900):
             self._api("sendMessage", chat_id=self.chat_id, text=text[i:i + 3900])
@@ -492,21 +493,40 @@ class TelegramBot:
                 logger.warning(f"copilot tick hatası: {e}")
             time.sleep(interval)
 
-    # ---- GitHub Actions modu: tek geçiş, durum dosyada saklanır --------------
-    def run_once(self) -> None:
-        """Tek geçiş: komutları cevapla + planları kontrol et + durumu kaydet.
+    # ---- GitHub Actions modu: GECE NÖBETÇİSİ ---------------------------------
+    def _pc_alive(self) -> bool:
+        """PC'deki bot komut dinliyor mu? Telegram ikinci dinleyiciye 409 döner.
 
-        GitHub Actions cron'u (ör. 15 dk'da bir) bunu çağırır; PC kapalıyken
-        bedava 7/24 çalışma yolu. Bedel: 15 dk'ya kadar gecikme.
+        PC'deki bot getUpdates'i uzun-poll ile sürekli tutar; biz de timeout=0
+        ile dokunuruz. 409 Conflict = PC canlı. offset göndermediğimiz için
+        hiçbir mesajı TÜKETMEZ — PC'nin kuyruğu bozulmaz.
         """
+        try:
+            r = requests.post(API.format(token=self.token, method="getUpdates"),
+                              json={"timeout": 0, "limit": 1}, timeout=15)
+            return r.status_code == 409
+        except Exception:  # noqa: BLE001
+            return False   # emin olamadıysak nöbeti al — uyarı kaçırmak daha kötü
+
+    def run_once(self) -> None:
+        """Bulut nöbetçisi: PC KAPALIYSA tek geçiş yapar (GitHub Actions cron'u).
+
+        Önce Telegram'a dokunur: PC'deki bot dinliyorsa (409) nöbet ondadır,
+        hiçbir şey yapmadan çıkar. PC kapalıysa planları kontrol eder,
+        uyarıları 🌙 önekiyle yollar. Komut CEVAPLAMAZ (PC ile çift cevap
+        riski) — komutlar PC açılınca ana botta.
+        """
+        if self._pc_alive():
+            logger.info("PC'deki bot canlı (Telegram 409) — nöbet onda, çıkıyorum.")
+            return
+        self.tag = "🌙 "
         active = self._load_state()
-        self._process_updates(timeout=0)   # bekleyen komutları cevapla
         try:
             self._tick(active)
         except Exception as e:  # noqa: BLE001
             logger.warning(f"tick hatası: {e}")
         self._save_state(active)
-        logger.info("tek geçiş bitti, durum kaydedildi.")
+        logger.info("gece nöbeti geçişi bitti, durum kaydedildi.")
 
     def run(self) -> None:
         t = threading.Thread(target=self.copilot_loop, daemon=True)

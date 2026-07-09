@@ -1,7 +1,9 @@
-# 15 dakikada bir co-pilot tek gecis: analiz + Telegram uyari + komut cevabi.
-# PC kapaliyken bedava 7/24 calisma. Gecikme: ~15 dk (cron hassas degildir).
-# Kurulum: repo Settings -> Secrets and variables -> Actions ->
-#   New repository secret: TELEGRAM_BOT_TOKEN = BotFather token'i
+# GECE NOBETCISI: 15 dakikada bir calisir ama once PC'ye sorar.
+# PC'deki bot Telegram'i dinliyorsa (409 Conflict) HICBIR SEY YAPMADAN cikar.
+# PC kapaliysa nobeti alir: analiz + 🌙 onekli Telegram uyarilari.
+# Not: free-tier cron hassas degildir (15 dk yerine bazen saatler atlayabilir)
+# — bu bir yedek nobetcidir, ana calisma PC'dedir.
+# Kurulum: repo Settings -> Secrets -> TELEGRAM_BOT_TOKEN = BotFather token'i
 name: copilot
 
 on:
@@ -31,9 +33,10 @@ jobs:
       - name: Bagimliliklar
         run: pip install -e .
 
-      - name: Co-pilot tek gecis
+      - name: Gece nobetcisi (PC kapaliysa tek gecis)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TRADEBOT_STATE_DIR: ${{ github.workspace }}   # durum repo kokunde kalsin
         run: python -m tradebot.telegram_bot --once
 
       - name: Durumu kaydet (commit)

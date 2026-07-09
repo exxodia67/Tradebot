@@ -21,8 +21,13 @@ ROOT = Path(__file__).resolve().parents[2]
 # Kalıcı durum (journal, telegram durumu): kurulum klasöründen BAĞIMSIZ.
 # Neden: bot farklı klasörlere kurulunca her kopya kendi journal'ını tutuyordu —
 # işlemler "kayboluyordu" (06.07: gece stopları /journal'da görünmedi).
-STATE_DIR = Path.home() / ".tradebot"
-STATE_DIR.mkdir(exist_ok=True)
+# GitHub Actions (gece nöbetçisi) TRADEBOT_STATE_DIR ile repo köküne yönlendirir
+# — runner'ın ev klasörü her koşuda sıfırlanır, repo'daki dosyalar commit'lenir.
+import os
+
+_env_state = os.environ.get("TRADEBOT_STATE_DIR")
+STATE_DIR = Path(_env_state) if _env_state else Path.home() / ".tradebot"
+STATE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class Secrets(BaseSettings):
