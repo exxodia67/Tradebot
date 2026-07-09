@@ -73,6 +73,12 @@ class TelegramBot:
         self._offset = 0
         self._last_daily: str | None = None
         self._active: dict = {}   # tf -> (Setup, aid, ts) — /durum'da göstermek için
+        # TradingView nöbetçisi: görüş kategorisi değişince Telegram'a haber
+        try:
+            from tradebot.tradingview import TvWatcher
+            self._tv = TvWatcher(symbol)
+        except Exception:  # noqa: BLE001
+            self._tv = None
 
     # ---- telegram API ----------------------------------------------------
     def _api(self, method: str, **params):
@@ -383,6 +389,12 @@ class TelegramBot:
     def _tick(self, active: dict) -> None:
         cp = self.copilot
         price = cp.feed.mark_price(self.symbol)
+        if self._tv is not None:   # TradingView görüş değişiklikleri (anlık)
+            try:
+                for m in self._tv.check():
+                    self.send(m)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"tv nöbetçisi: {e}")
         for tf in PLANS:
             st = active.get(tf)
             if st is None:
@@ -419,10 +431,19 @@ class TelegramBot:
                     tv_link = (f"https://www.tradingview.com/chart/?symbol="
                                f"BINANCE:{self.symbol}.P&interval="
                                f"{'15' if tf == '15m' else '60'}")
+                    tv_gorus = ""
+                    try:   # TV o an aynı yönde mi? (uyum ✓ / ÇELİŞKİ ⚠️)
+                        from tradebot.tradingview import uyum_satiri
+                        u = uyum_satiri(self.symbol, tf, setup.side)
+                        if u:
+                            tv_gorus = u + "\n"
+                    except Exception:  # noqa: BLE001
+                        pass
                     self.send(f"{head}\n"
                               f"Giriş: {setup.entry:.2f}  Şu an: {price:.2f}\n"
                               f"Stop: {setup.stop:.2f}\nHedef: {setup.target:.2f}\n"
-                              f"{be_satir}{setup.reason}\n(Emri ve STOP'u SEN koy — 5x)\n"
+                              f"{be_satir}{tv_gorus}{setup.reason}\n"
+                              f"(Emri ve STOP'u SEN koy — 5x)\n"
                               f"Grafik: {tv_link}")
                     cp.say(f"TG uyarı: [{tf}] {setup.side} {setup.entry:.2f} (yol %{prog*100:.0f})")
             else:
