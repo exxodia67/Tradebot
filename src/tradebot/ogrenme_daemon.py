@@ -56,6 +56,8 @@ PAT_TR = {
     "P5_RSI_DONUS": "RSI dönüşü", "P6_YUTAN": "yutan mum",
     "P7_PINBAR": "iğne mum", "P8_SIKISMA": "sıkışma kırılımı",
     "P9_SEKME_MR": "destek/direnç sekmesi", "P10_ICBAR": "iç bar kırılımı",
+    "P11_SUPERTREND": "Supertrend dönüşü", "P12_VWAP": "VWAP geri alımı",
+    "P13_WAVETREND": "WaveTrend dönüşü",
 }
 
 

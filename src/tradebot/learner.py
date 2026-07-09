@@ -13,6 +13,9 @@ Ne yapar:
        P8_SIKISMA   : Bollinger sıkışması sonrası kırılım, trend yönünde
        P9_SEKME_MR  : 24s destek/dirençten sekme — TREND FİLTRESİZ (mean-rev testi)
        P10_ICBAR    : iç bar (inside bar) kırılımı, trend yönünde
+       P11_SUPERTREND: Supertrend(10,3) dönüşü trend yönünde [TV: UT Bot ailesi]
+       P12_VWAP     : gün-içi VWAP geri alımı trend yönünde [TV: kurumsal referans]
+       P13_WAVETREND: WaveTrend ±40 aşırı bölgeden kesişim [TV: LazyBear]
   3) Her sinyali ATR-stop / R-hedefle sonucuna kadar izler ve puanlar.
      DÜRÜSTLÜK: aynı barda stop+hedef ikisi de vurulmuşsa STOP sayılır (kötümser),
      her işlemden %0.08 gidiş-dönüş komisyon düşülür.
@@ -36,7 +39,7 @@ import pandas as pd
 
 from tradebot.config import ROOT
 from tradebot.exchange.binance_futures import fetch_mainnet_klines
-from tradebot.indicators import adx, atr, rsi, sma
+from tradebot.indicators import adx, atr, rsi, sma, supertrend, vwap_daily, wavetrend
 
 FEE_RT_PCT = 0.08   # gidiş-dönüş taker komisyonu (%): 2 x %0.04
 WEEKDAYS = ("Pzt", "Sal", "Car", "Per", "Cum", "Cmt", "Paz")
@@ -85,6 +88,13 @@ def prep(df: pd.DataFrame, sr_win: int) -> pd.DataFrame:
     std = out["close"].rolling(20).std()
     bw = (4 * std) / mid * 100
     out["squeeze"] = bw <= bw.shift(1).rolling(60).quantile(0.25)
+    # TradingView topluluğunun en popüler script ailelerinin çekirdekleri
+    out["st_dir"] = supertrend(out, 10, 3.0)
+    try:
+        out["vwap"] = vwap_daily(out)
+    except Exception:  # noqa: BLE001 — open_time yoksa vb.
+        out["vwap"] = float("nan")
+    out["wt1"], out["wt2"] = wavetrend(out)
     return out
 
 
@@ -159,6 +169,24 @@ def signals(r, prev, prev2) -> list[tuple[str, str]]:
             out.append(("P10_ICBAR", "LONG"))
         if dn and r.close < prev2.low:
             out.append(("P10_ICBAR", "SHORT"))
+    # --- TradingView topluluğundan alınan referanslar (P11-P13) ---
+    if prev is not None:
+        # P11 Supertrend dönüşü (UT Bot / TrendMaster ailesi), trend teyitli
+        if up and prev.st_dir < 0 and r.st_dir > 0:
+            out.append(("P11_SUPERTREND", "LONG"))
+        if dn and prev.st_dir > 0 and r.st_dir < 0:
+            out.append(("P11_SUPERTREND", "SHORT"))
+        # P12 gün-içi VWAP geri alımı (kurumsal intraday referansı)
+        if not pd.isna(r.vwap) and not pd.isna(prev.vwap):
+            if up and prev.close < prev.vwap and r.close > r.vwap:
+                out.append(("P12_VWAP", "LONG"))
+            if dn and prev.close > prev.vwap and r.close < r.vwap:
+                out.append(("P12_VWAP", "SHORT"))
+        # P13 WaveTrend aşırı bölgeden kesişim (LazyBear)
+        if up and prev.wt1 <= prev.wt2 and r.wt1 > r.wt2 and r.wt1 < -40:
+            out.append(("P13_WAVETREND", "LONG"))
+        if dn and prev.wt1 >= prev.wt2 and r.wt1 < r.wt2 and r.wt1 > 40:
+            out.append(("P13_WAVETREND", "SHORT"))
     return out
 
 
