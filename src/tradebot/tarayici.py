@@ -71,7 +71,11 @@ class Tarayici:
             cp.journal = self.journal    # tarayıcının kendi karnesi
             self.cps[s] = cp
         # key "SYM|tf" -> (Setup, aid, ts)
-        self.active: dict[str, tuple[Setup, int, str]] = self._load()
+        self.active: dict[str, tuple[Setup, int, str]] = {}
+        # SOĞUMA: stop yiyen coin/plan hemen yeniden giremez (10.07: LINK 15 dk
+        # arayla iki kez aynı kırılıma girdi, ikisi de stop). key -> kadar (UTC)
+        self.cooldown: dict[str, datetime] = {}
+        self._load()
 
     # ---- telegram: SADECE gönderme ------------------------------------------
     def send(self, text: str) -> None:
@@ -84,20 +88,24 @@ class Tarayici:
                 logger.warning(f"telegram gönderilemedi: {e}")
 
     # ---- durum dosyası -------------------------------------------------------
-    def _load(self) -> dict:
+    def _load(self) -> None:
         if not STATE_FILE.exists():
-            return {}
+            return
         try:
             st = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-            return {k: (Setup(**v["setup"]), v["aid"], v["ts"])
-                    for k, v in st.get("active", {}).items()}
+            self.active = {k: (Setup(**v["setup"]), v["aid"], v["ts"])
+                           for k, v in st.get("active", {}).items()}
+            now = datetime.now(timezone.utc)
+            self.cooldown = {k: t for k, v in st.get("cooldown", {}).items()
+                             if (t := datetime.fromisoformat(v)) > now}
         except Exception:  # noqa: BLE001
-            return {}
+            pass
 
     def _save(self) -> None:
         STATE_FILE.write_text(json.dumps({
             "active": {k: {"setup": asdict(s), "aid": aid, "ts": ts}
                        for k, (s, aid, ts) in self.active.items()},
+            "cooldown": {k: t.isoformat() for k, t in self.cooldown.items()},
         }, ensure_ascii=False), encoding="utf-8")
 
     # ---- kapanış taraması (ana botla aynı mantık: 5m replay + BE) ------------
@@ -134,6 +142,9 @@ class Tarayici:
             key = f"{sym}|{tf}"
             st = self.active.get(key)
             if st is None:
+                soguma = self.cooldown.get(key)
+                if soguma and datetime.now(timezone.utc) < soguma:
+                    continue   # taze stop yedi — aynı kurulumu kovalamasın
                 setup, _ = cp.analyze(tf)
                 if not setup:
                     continue
@@ -172,10 +183,16 @@ class Tarayici:
                     ad = "BAŞABAŞ" if hit == "BE" else hit
                     saat = (hit_t + timedelta(hours=3)).strftime("%H:%M")
                     s = self.journal.summary()
+                    ek = ""
+                    if hit == "STOP":
+                        dk = 90 if tf == "15m" else 240
+                        self.cooldown[key] = (datetime.now(timezone.utc)
+                                              + timedelta(minutes=dk))
+                        ek = f"\n({sym} [{tf}] {dk} dk soğumada — hemen yeniden girmez)"
                     self.send(f"{em} 🛰️ {sym} [{tf}] {ad}: {a.side} {fmt(a.entry)} -> "
                               f"{fmt(exit_px)} ({chg:+.2f}% | 5x {chg * 5:+.2f}%) "
                               f"{saat} TR\nTarayıcı karnesi: {s['kapanan']} kapanan, "
-                              f"win %{s['win_rate']}, toplam %{s['toplam_pnl_pct']}")
+                              f"win %{s['win_rate']}, toplam %{s['toplam_pnl_pct']}{ek}")
                     self.active.pop(key, None)
                 elif a.be_at and not a.be_armed and (
                         price >= a.be_at if a.side == "LONG" else price <= a.be_at):

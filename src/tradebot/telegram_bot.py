@@ -73,6 +73,9 @@ class TelegramBot:
         self._offset = 0
         self._last_daily: str | None = None
         self._active: dict = {}   # tf -> (Setup, aid, ts) — /durum'da göstermek için
+        # SOĞUMA: stop yiyen plan hemen yeniden analiz açamaz (tarayıcıdaki
+        # 10.07 LINK çifte-stopunun ana bottaki karşılığı). tf -> kadar (UTC)
+        self._cooldown: dict[str, datetime] = {}
 
     # ---- telegram API ----------------------------------------------------
     def _api(self, method: str, **params):
@@ -323,6 +326,9 @@ class TelegramBot:
             if until > datetime.now(timezone.utc):
                 ren[tf] = {"side": r["side"], "entry": r["entry"], "until": until}
         self.copilot._reentry = ren
+        now = datetime.now(timezone.utc)
+        self._cooldown = {tf: t for tf, v in (st.get("cooldown") or {}).items()
+                          if (t := datetime.fromisoformat(v)) > now}
         active: dict = {}
         for tf, a in (st.get("active") or {}).items():
             ats = a.get("ts")
@@ -346,6 +352,7 @@ class TelegramBot:
                         for tf, r in self.copilot._reentry.items()},
             "active": {tf: {"setup": asdict(s), "aid": aid, "ts": ats}
                        for tf, (s, aid, ats) in active.items()},
+            "cooldown": {tf: t.isoformat() for tf, t in self._cooldown.items()},
         }, ensure_ascii=False), encoding="utf-8")
 
     # ---- copilot tek geçiş (hem sürekli mod hem --once bunu kullanır) -------
@@ -389,6 +396,9 @@ class TelegramBot:
             if st is None:
                 setup = cp.analyze_reentry(tf, price)
                 if setup is None:
+                    cd = self._cooldown.get(tf)
+                    if cd and datetime.now(timezone.utc) < cd:
+                        continue   # taze stop — soğuma bitene dek yeni analiz yok
                     setup, _ = cp.analyze(tf)
                 if setup:
                     # tazelik: uyarı sana ulaştığında fiyat kaçmış olabilir
@@ -456,7 +466,11 @@ class TelegramBot:
                         cp._reentry[tf] = {
                             "side": a.side, "entry": a.entry,
                             "until": datetime.now(timezone.utc) + timedelta(hours=4)}
-                        msg += "\n(4 saat ikinci-giriş nöbeti başladı)"
+                        dk = 90 if tf == "15m" else 240
+                        self._cooldown[tf] = (datetime.now(timezone.utc)
+                                              + timedelta(minutes=dk))
+                        msg += (f"\n(4 saat ikinci-giriş nöbeti başladı; normal "
+                                f"analiz {dk} dk soğumada)")
                     self.send(msg)
                     cp.say(f"TG kapanış: {msg}")
                     active.pop(tf, None)

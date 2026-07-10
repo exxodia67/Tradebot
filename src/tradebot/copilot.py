@@ -203,14 +203,14 @@ class Copilot:
             return None, f"{read} · MA'lar yapışık %{sep_pct:.2f} (whipsaw) — BEKLE"
         if self.vol_mult > 0 and vol_ratio < self.vol_mult:  # varsayılan kapalı
             return None, f"{read} · hacim zayıf {vol_ratio:.2f}x — BEKLE"
-        # AKŞAM+SICAK RSI (05.07 stopu sonrası eklendi): 18-19 UTC girişi geceye
-        # sarkıyor; 90g testte RSI>=65 + saat>=18 UTC LONG: 31 işlem, win %6.5,
-        # ort -%0.56. Gece filtresi 20'de başlıyor ama bu profil 2 saat önce ölüyor.
-        if (not self.no_quiet and tf == "15m" and bias == "LONG"
-                and hour in (18, 19) and rsi_v >= 65):
-            return None, (f"{read} · akşam {(hour + 3) % 24:02d}:00 TR + RSI{rsi_v:.0f} "
-                          f"sıcak — 90g testte bu profil 31 işlemde win %6.5 "
-                          f"(geceye sarkıp stop yiyor) — BEKLE")
+        # TEPE KOVALAMA koruması (10.07: tarayıcıda 4 sinyal 4 stop — hepsi 15m
+        # LONG RSI65-69, saatler farklı; sorun saat değil RSI'mış). Üç coinde
+        # aynı yön: ETH 90g LONG RSI>=65 n=7 win %14 / RSI<65 win %50;
+        # BTC 60g n=3 ve LINK 60g n=5 hepsi stop. Eski 18-19 UTC akşam
+        # filtresinin genel hâli — onu kapsar, yerine geçti.
+        if tf == "15m" and bias == "LONG" and rsi_v >= 65:
+            return None, (f"{read} · RSI{rsi_v:.0f} zaten sıcak — LONG şimdi girmek "
+                          f"tepe kovalamak olur (3 coin 15 işlem: 1 kazanç) — BEKLE")
         # DİP KOVALAMA koruması (08.07: RSI 27 ve 30'da iki SHORT, ikisi de stop,
         # ilki 5 dakikada). 90g: RSI32-45 SHORT iki yarıda da eksi (-0.20/-0.20),
         # RSI>45 SHORT iki yarıda da artı. Kanıt orta kuvvette (n küçük) ama
