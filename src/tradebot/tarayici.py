@@ -1,7 +1,12 @@
-"""Çoklu-Coin Tarayıcı — ana botla AYNI kurallar, 12 coin, ayrı pencere.
+"""Coin Tarayıcı — ana botla AYNI kurallar, BTC + LINK, ayrı pencere.
+
+Kadro 11.07.2026'da 12 coinden 2'ye indirildi (kullanıcı isteği: ETH+BTC+1).
+LINK seçimi veriyle: 60g yeni kurallarla n=23 toplam +%17.4, iki yarı da artı
+(SOL/BNB ikinci yarıda eksi, elendi). BTC 60g'de eksiydi (-%8.7) — kullanıcı
+istedi, karne toplayıp kanıtla konuşacağız.
 
 Ne yapar:
-  * 12 yüksek hacimli coini (ETH hariç — o ana botta) her ~60 saniyede tarar.
+  * Coinleri (ETH hariç — o ana botta) her ~60 saniyede tarar.
   * Ana botun AYNI kural setini kullanır (Copilot.analyze: trend+pullback,
     gece/akşam filtreleri, dip-kovalama koruması, BE-1.5R...).
   * Kurulum çıkan coinde ANINDA Telegram uyarısı + kâğıt işlem açar.
@@ -15,7 +20,7 @@ Ne yapar:
     diğer coinlerde kanıt TOPLAMA aşamasındayız — karne bunun için.
   * İkinci-giriş (reclaim) kuralı tarayıcıda YOK (sade tutuldu).
 
-Kullanım: 11-Coin-Tarayici.bat  (veya python -m tradebot.tarayici)
+Kullanım: BTC-LINK-Tarayici.bat  (veya python -m tradebot.tarayici)
 """
 from __future__ import annotations
 
@@ -33,8 +38,7 @@ from tradebot.copilot import PLANS, Copilot, Setup
 from tradebot.datafeed import make_feed
 from tradebot.journal import Journal
 
-COINS = ("BTCUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT",
-         "LTCUSDT", "LINKUSDT", "AVAXUSDT", "DOTUSDT", "TRXUSDT", "NEARUSDT")
+COINS = ("BTCUSDT", "LINKUSDT")
 CHAT_FILE = STATE_DIR / "telegram_chat.json"
 STATE_FILE = STATE_DIR / "tarayici_state.json"
 DB_FILE = STATE_DIR / "tarayici_journal.db"

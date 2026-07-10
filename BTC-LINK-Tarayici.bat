@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 >nul
-title Tradebot - Coin Tarayici (12 coin)
+title Tradebot - Coin Tarayici (BTC + LINK)
 cd /d "%~dp0"
 if not exist .venv\Scripts\python.exe (
   echo [HATA] Once SIFIRDAN-KUR.bat calistir - kurulum yok.
   pause
   exit /b 1
 )
-echo Coin tarayici baslatiliyor (BTC, BNB, SOL, XRP, ADA, DOGE, LTC, LINK, AVAX, DOT, TRX, NEAR)...
+echo Coin tarayici baslatiliyor (BTC, LINK)...
 echo Ana botla ayni anda calisabilir - komut dinlemez, cakismaz.
 :dongu
 .venv\Scripts\python -m tradebot.tarayici
