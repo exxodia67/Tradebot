@@ -158,7 +158,8 @@ class TelegramBot:
 
         for tf in PLANS:
             p = PLANS[tf]
-            baslik = f"\n[{tf}] plan — üst filtre {p['trend']}, hedef {p['rr']:.0f}R"
+            baslik = (f"\n[{tf}] plan — üst filtre {p['trend']}, "
+                      f"hedef {p.get('tp_r', p['rr']):.2g}R")
             try:
                 setup, status = self.copilot.analyze(tf)
             except Exception as e:  # noqa: BLE001
@@ -193,15 +194,16 @@ class TelegramBot:
                 elif bias:
                     atr_v = float(atr(d, 14).iloc[-1])
                     sd = atr_v * self.copilot.atr_stop_mult
+                    tpr = p.get("tp_r", p["rr"])
                     stop = price - sd if bias == "LONG" else price + sd
-                    tgt = (price + sd * p["rr"] if bias == "LONG"
-                           else price - sd * p["rr"])
+                    tgt = (price + sd * tpr if bias == "LONG"
+                           else price - sd * tpr)
                     rp = sd / price * 100
-                    tp = rp * p["rr"]
+                    tp = rp * tpr
                     satir.append(
                         f"   Kurulursa taslak: {bias} giriş ~{price:.2f} · "
                         f"stop {stop:.2f} (-%{rp:.2f}) · hedef {tgt:.2f} (+%{tp:.2f})\n"
-                        f"   5x ile: stop -%{rp * 5:.1f} / hedef +%{tp * 5:.1f} · R/R 1:{p['rr']:.0f}")
+                        f"   5x ile: stop -%{rp * 5:.1f} / hedef +%{tp * 5:.1f} · R/R 1:{tpr:.2g}")
                 else:
                     satir.append(f"   Taslak yok: {p['trend']} yönü belirsiz, plan yön seçemiyor.")
             except Exception:  # noqa: BLE001

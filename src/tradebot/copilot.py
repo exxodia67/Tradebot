@@ -64,14 +64,20 @@ from tradebot.journal import Journal
 # Plan tanımları: giriş TF -> (trend TF, hedef R, min ADX, 24s S/R bar sayısı,
 #                              sessiz saatler UTC)
 PLANS: dict[str, dict] = {
-    "15m": {"trend": "1h", "rr": 2.0, "adx_min": 20.0, "sr_win": 96,
-            "quiet": (20, 21, 22, 23), "be": 1.5},
+    "15m": {"trend": "1h", "rr": 2.0, "tp_r": 0.75, "adx_min": 20.0, "sr_win": 96,
+            "quiet": (20, 21, 22, 23), "be": 0.0},
     "1h":  {"trend": "1d", "rr": 3.0, "adx_min": 25.0, "sr_win": 24,
             "quiet": (), "be": 0.0},   # 1h: BE testte ZARARLI (3R'ye nefes lazım)
 }
-# "be": breakeven tetiği (R katı). 15m 90g testi: BE yok toplam %+5.4,
-# BE-1.5R %+13.1 (n=101). İki yarıda tutarlı DEĞİL (H1 -2.0→-4.7, H2 +7.4→+17.8)
-# — toplamda net pozitif olduğu ve tam-stopu kestiği için açık; garanti değildir.
+# "tp_r" (11.07): HEDEF R katı — giriş kalite filtresi rr'lik YER istemeye devam
+# eder (2R alan yoksa girilmez), ama kâr 0.75R'da alınır. 90g ETH taraması
+# (giriş seti aynı, sadece çıkış değişti, komisyon dahil, split-half):
+#   0.75R: n=60 win %77 toplam +%9.9 (H1 +2.1 / H2 +7.8 — iki yarı da artı)
+#   2.00R: n=44 win %45 toplam +%10.3 (H1 EKSİ; kaybeden 24'ün 12'si önce
+#          +0.5R kârdaydı — "kârdayken stopa döndü" şikayetinin kaynağı)
+# LINK 60g 0.75R: win %78 +%7.3; BTC her hedefte eksi (kadroda kullanıcı isteği).
+# "be": breakeven tetiği (R katı). Hedef 0.75R'a inince BE-1.5R anlamsızlaştı
+# (hedef BE tetiğinden önce gelir) — 15m'de kapatıldı. 1h planı değişmedi.
 
 
 @dataclass
@@ -184,7 +190,8 @@ class Copilot:
         recent_high = float(d_lo["high"].iloc[-2:].max())
         hour = (now or datetime.now(timezone.utc)).hour
         stop_dist = atr_v * self.atr_stop_mult
-        target_dist = stop_dist * p["rr"]
+        target_dist = stop_dist * p["rr"]                 # YER şartı (kalite filtresi)
+        tp_dist = stop_dist * p.get("tp_r", p["rr"])      # gerçek kâr-al mesafesi
 
         # her BEKLE satırına eklenen gerçek okuma (analiz gibi görünsün diye)
         aligned = (m7 > m25 > m99) if bias == "LONG" else (m7 < m25 < m99)
@@ -221,14 +228,14 @@ class Copilot:
 
         def mk(side: str, room: float, tag: str) -> Setup:
             stop = price - stop_dist if side == "LONG" else price + stop_dist
-            target = price + target_dist if side == "LONG" else price - target_dist
+            target = price + tp_dist if side == "LONG" else price - tp_dist
             be = p.get("be", 0.0)
             be_at = (price + stop_dist * be if side == "LONG"
                      else price - stop_dist * be) if be else 0.0
             return Setup(side, price, stop, target, adx_v,
                          f"[{tf}] {tag} + {p['trend']} trend + ADX{adx_v:.0f} "
                          f"vol{vol_ratio:.1f}x RSI{rsi_v:.0f} yer{room / atr_v:.1f}ATR "
-                         f"(hedef {p['rr']:.0f}R)",
+                         f"(hedef {p.get('tp_r', p['rr']):.2g}R)",
                          tf=tf, rsi=rsi_v, vol_ratio=vol_ratio,
                          room_atr=room / atr_v if atr_v else 0.0,
                          sep_pct=sep_pct, hour=hour, be_at=be_at)
@@ -310,7 +317,8 @@ class Copilot:
         m7, m25 = (sma(d_lo["close"], q).iloc[-1] for q in (7, 25))
         stop_dist = atr_v * self.atr_stop_mult
         stop = price - stop_dist if side == "LONG" else price + stop_dist
-        target = price + stop_dist * p["rr"] if side == "LONG" else price - stop_dist * p["rr"]
+        tp_dist = stop_dist * p.get("tp_r", p["rr"])
+        target = price + tp_dist if side == "LONG" else price - tp_dist
         self._reentry.pop(tf, None)
         be = p.get("be", 0.0)
         be_at = (price + stop_dist * be if side == "LONG"
@@ -327,7 +335,8 @@ class Copilot:
         logger.info("Yol gösterme modu — gerçek emir AÇILMAZ. Ctrl+C ile durdur.")
         self.say(f"\n===== OTURUM BAŞLADI {datetime.now():%Y-%m-%d %H:%M:%S} | "
                  f"{self.symbol} | planlar: " +
-                 ", ".join(f"[{tf}->{p['trend']} {p['rr']:.0f}R]" for tf, p in PLANS.items()) +
+                 ", ".join(f"[{tf}->{p['trend']} hedef {p.get('tp_r', p['rr']):.2g}R]"
+                           for tf, p in PLANS.items()) +
                  f" | her {interval}s | kaldıraç {self.leverage}x =====")
         active: dict[str, tuple[Setup, int]] = {}   # tf -> (setup, alert_id)
 
@@ -405,12 +414,13 @@ class Copilot:
                 time.sleep(interval)
 
     def _print_alert(self, s: Setup) -> None:
-        rr = PLANS[s.tf]["rr"]
+        p = PLANS[s.tf]
+        rr = p.get("tp_r", p["rr"])
         self.say("\n" + "=" * 60)
         self.say(f"  🔔 KURULUM [{s.tf}]: {s.side}")
         self.say(f"  Giriş : {s.entry:.2f}")
         self.say(f"  Stop  : {s.stop:.2f}")
-        self.say(f"  Hedef : {s.target:.2f}  ({rr:.0f}R)")
+        self.say(f"  Hedef : {s.target:.2f}  ({rr:.2g}R)")
         self.say(f"  Teyit : RSI {s.rsi:.0f} · hacim {s.vol_ratio:.1f}x · "
                  f"baraj {s.room_atr:.1f} ATR uzakta")
         if s.be_at:
