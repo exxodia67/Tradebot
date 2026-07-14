@@ -211,27 +211,41 @@ class TelegramBot:
             parts.append("\n".join(satir))
         return "\n".join(parts)
 
-    def journal_text(self) -> str:
-        s = self.journal.summary()
-        out = [f"📒 Journal — botun GERÇEK uyarıları (simülasyonlar buraya girmez)",
-               f"{s['kapanan']} kapanan işlem",
-               f"win %{s['win_rate']}  ort %{s['ort_pnl_pct']}  "
-               f"toplam %{s['toplam_pnl_pct']} (5x %{s['toplam_pnl_pct'] * 5:+.2f})",
-               ""]
-        for r in self.journal.last_trades(8):
+    def _karne_bolum(self, baslik: str, jr: Journal, n: int = 6) -> list[str]:
+        s = jr.summary()
+        out = [baslik,
+               f"{s['kapanan']} kapanan · win %{s['win_rate']} · "
+               f"toplam %{s['toplam_pnl_pct']} (5x %{s['toplam_pnl_pct'] * 5:+.2f})"]
+        for r in jr.last_trades(n):
             try:
                 t = (datetime.fromisoformat(r["ts"]) + timedelta(hours=3)
                      ).strftime("%d.%m %H:%M")
             except Exception:  # noqa: BLE001
                 t = r["ts"][:16]
+            sym = (r.get("symbol") or "?").replace("USDT", "")
             if r["outcome"]:
                 em = {"HEDEF": "✅", "STOP": "🛑", "BE": "😐"}.get(r["outcome"], "🛑")
-                out.append(f"{em} {t} {r['side']} {r['entry']:.2f} -> "
+                out.append(f"{em} {t} {sym} {r['side']} {r['entry']:.2f} -> "
                            f"{r['outcome']} {r['pnl_pct']:+.2f}% "
                            f"(5x {r['pnl_pct'] * 5:+.1f}%)")
             else:
-                out.append(f"⏳ {t} {r['side']} {r['entry']:.2f} AÇIK "
+                out.append(f"⏳ {t} {sym} {r['side']} {r['entry']:.2f} AÇIK "
                            f"(stop {r['stop']:.2f} hedef {r['target']:.2f})")
+        return out
+
+    def journal_text(self) -> str:
+        """Üç programın karnesi tek ekranda (her biri kendi defterini tutar)."""
+        out = ["📒 Journal — GERÇEK uyarılar (simülasyonlar buraya girmez)", ""]
+        out += self._karne_bolum(f"🤖 Ana bot ({self.symbol.replace('USDT', '')})",
+                                 self.journal)
+        for baslik, dosya in (("📡 Tarayıcı (BTC+LINK)", "tarayici_journal.db"),
+                              ("🎯 Fırsat Avcısı", "avci_journal.db")):
+            out.append("")
+            p = STATE_DIR / dosya
+            if p.exists():
+                out += self._karne_bolum(baslik, Journal(p))
+            else:
+                out.append(f"{baslik}: kayıt yok — program bu makinede hiç çalışmamış.")
         return "\n".join(out)
 
     # ---- komut döngüsü -----------------------------------------------------
