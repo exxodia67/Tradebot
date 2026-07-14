@@ -19,7 +19,8 @@ Coin başına tek açık kâğıt işlem; stop yiyince 90 dk soğuma.
 ÖNEMLİ: Telegram'a SADECE MESAJ GÖNDERİR — komut dinlemez (ana botla çakışmaz).
 GERÇEK EMİR AÇMAZ — kâğıt işlem, karne avci_journal.db'de birikir.
 
-Kullanım: Firsat-Avcisi.bat  (veya python -m tradebot.avci)
+Kullanım: normalde telegram_bot içinde otomatik başlar (TEK UYGULAMA).
+Tek başına: python -m tradebot.avci
 """
 from __future__ import annotations
 
@@ -72,6 +73,10 @@ class Avci:
         self.active: dict[str, tuple[Setup, int, str]] = {}   # sym -> (setup, aid, ts)
         self.cooldown: dict[str, datetime] = {}               # sym -> kadar
         self.son_bar: dict[str, object] = {}                  # sym -> işlenen son bar
+        # Tek-uygulama modu (telegram_bot içinde thread): banner ve saatlik özet
+        # ana bottan yönetilir — kapatılır ki aynı saatte 3 ayrı mesaj düşmesin.
+        self.banner = True
+        self.ozet_acik = True
         self._load()
 
     # ---- telegram: SADECE gönderme ------------------------------------------
@@ -255,9 +260,10 @@ class Avci:
     def run(self) -> None:
         self.ruhsat_yenile()
         logger.info(f"Avcı başladı: {', '.join(COINS)}")
-        self.send(f"🎯 Fırsat Avcısı başladı — {', '.join(c[:-4] for c in COINS)}, "
-                  f"13 pattern, sadece kanıtlılar konuşur.\n{self.ruhsat_ozet()}\n"
-                  f"Not: ruhsat 12 saatte bir tazelenir; kanıtı düşen pattern susar.")
+        if self.banner:
+            self.send(f"🎯 Fırsat Avcısı başladı — {', '.join(c[:-4] for c in COINS)}, "
+                      f"13 pattern, sadece kanıtlılar konuşur.\n{self.ruhsat_ozet()}\n"
+                      f"Not: ruhsat 12 saatte bir tazelenir; kanıtı düşen pattern susar.")
         son_ozet = time.time()
         while True:
             t0 = time.time()
@@ -272,7 +278,7 @@ class Avci:
                 except Exception as e:  # noqa: BLE001
                     logger.warning(f"{sym} tur hatası: {e}")
             self._save()
-            if time.time() - son_ozet >= OZET_SN:
+            if self.ozet_acik and time.time() - son_ozet >= OZET_SN:
                 son_ozet = time.time()
                 try:
                     self.send(self.ozet())

@@ -15,7 +15,7 @@ Ne yapar:
 Kurulum:
   1) Telegram'da @BotFather -> /newbot -> token al
   2) .env dosyasına ekle:  TELEGRAM_BOT_TOKEN=123456:ABC...
-  3) python -m tradebot.telegram_bot   (veya 9-Telegram-Bot.bat)
+  3) python -m tradebot.telegram_bot   (veya KUR-VE-CALISTIR.bat)
   4) Telegram'da botuna /start yaz — bot seni tanır (chat id kaydeder)
 
 PC kapalıyken çalışması için bu klasörü bir sunucuya (VPS / PythonAnywhere /
@@ -558,6 +558,36 @@ class TelegramBot:
         self._save_state(active)
         logger.info("gece nöbeti geçişi bitti, durum kaydedildi.")
 
+    def _yardimci_baslat(self) -> None:
+        """Tarayıcı (BTC+LINK) ve Fırsat Avcısı AYNI pencerede thread olarak.
+
+        14.07: üç ayrı bat/pencere kafa karıştırıyordu — tek uygulamaya
+        birleştirildi. İkisi de Telegram'a SADECE mesaj gönderir (getUpdates
+        dinlemez), o yüzden ana botun komut kuyruğuyla çakışmaz. Banner ve
+        saatlik özetleri kapalı: tek başlangıç mesajı + tek saatlik rapor.
+        Çökerlerse 60 sn sonra yeniden doğarlar; chat_id henüz yoksa (/start
+        yazılmadıysa) bekleyip tekrar denerler.
+        """
+        def calistir(ad: str, fabrika) -> None:
+            while True:
+                try:
+                    w = fabrika()
+                    w.banner = False
+                    w.ozet_acik = False
+                    w.run()
+                except SystemExit:
+                    logger.info(f"{ad}: chat/token hazır değil — 60 sn sonra tekrar")
+                except Exception as e:  # noqa: BLE001
+                    logger.warning(f"{ad} çöktü: {e} — 60 sn sonra yeniden başlar")
+                time.sleep(60)
+
+        from tradebot.avci import Avci
+        from tradebot.tarayici import Tarayici
+        threading.Thread(target=calistir, args=("tarayıcı", Tarayici),
+                         daemon=True).start()
+        threading.Thread(target=calistir, args=("avcı", Avci),
+                         daemon=True).start()
+
     def run(self) -> None:
         t = threading.Thread(target=self.copilot_loop, daemon=True)
         t.start()
@@ -570,9 +600,13 @@ class TelegramBot:
             self._has_learn = True
         except Exception as e:  # noqa: BLE001
             logger.warning(f"öğrenme modülü başlatılamadı: {e}")
+        self._yardimci_baslat()   # tarayıcı + avcı aynı pencerede
         if self.chat_id:
-            self.send("🤖 Co-pilot başladı: kurulum çıkınca ANINDA uyarı + kâğıt işlem "
-                      "takibi + SAATTE BİR sade rapor — hepsi bu pencerede. "
+            self.send("🤖 Bot başladı — TEK UYGULAMA:\n"
+                      "• Ana plan: ETH 15m + 1h (anında kurulum uyarısı)\n"
+                      "• 🛰️ Tarayıcı: BTC + LINK (aynı kurallar)\n"
+                      "• 🎯 Fırsat Avcısı: 90g ruhsatlı pattern'ler\n"
+                      "Saatte bir TEK rapor, /journal üç karneyi birden gösterir. "
                       "/durum ile kontrol et.")
         self.poll_loop()   # ana thread komutları dinler
 

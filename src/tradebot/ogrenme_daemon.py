@@ -298,6 +298,18 @@ class OgrenmeDaemon:
                              f"(5x %{s['toplam_pnl_pct'] * 5:+.1f}) — detay: /journal")
         except Exception:  # noqa: BLE001
             pass
+        # tek uygulama: tarayıcı + avcı karneleri de aynı raporda (ayrı özet yok)
+        from tradebot.journal import Journal
+        for ad, dosya in (("🛰️ Tarayıcı (BTC+LINK)", "tarayici_journal.db"),
+                          ("🎯 Avcı", "avci_journal.db")):
+            try:
+                p = STATE_DIR / dosya
+                if p.exists() and (s := Journal(p).summary())["kapanan"]:
+                    lines.append(f"{ad}: {s['kapanan']} kapanan, win %{s['win_rate']}, "
+                                 f"toplam %{s['toplam_pnl_pct']} "
+                                 f"(5x %{s['toplam_pnl_pct'] * 5:+.1f})")
+            except Exception:  # noqa: BLE001
+                pass
 
         if self.learning and not self.last_learn:
             lines.append("\n⏳ İlk tam öğrenme sürüyor (5-15 dk).")

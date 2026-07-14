@@ -20,7 +20,8 @@ Ne yapar:
     diğer coinlerde kanıt TOPLAMA aşamasındayız — karne bunun için.
   * İkinci-giriş (reclaim) kuralı tarayıcıda YOK (sade tutuldu).
 
-Kullanım: BTC-LINK-Tarayici.bat  (veya python -m tradebot.tarayici)
+Kullanım: normalde telegram_bot içinde otomatik başlar (TEK UYGULAMA).
+Tek başına: python -m tradebot.tarayici
 """
 from __future__ import annotations
 
@@ -79,6 +80,10 @@ class Tarayici:
         # SOĞUMA: stop yiyen coin/plan hemen yeniden giremez (10.07: LINK 15 dk
         # arayla iki kez aynı kırılıma girdi, ikisi de stop). key -> kadar (UTC)
         self.cooldown: dict[str, datetime] = {}
+        # Tek-uygulama modu (telegram_bot içinde thread): banner ve saatlik özet
+        # ana bottan yönetilir — kapatılır ki aynı saatte 3 ayrı mesaj düşmesin.
+        self.banner = True
+        self.ozet_acik = True
         self._load()
 
     # ---- telegram: SADECE gönderme ------------------------------------------
@@ -231,10 +236,11 @@ class Tarayici:
     # ---- ana döngü -----------------------------------------------------------
     def run(self) -> None:
         logger.info(f"Tarayıcı başladı: {len(COINS)} coin | tur ~{TARAMA_SN}s")
-        self.send(f"🛰️ Coin tarayıcı başladı: {', '.join(c[:-4] for c in COINS)}.\n"
-                  f"Ana botun kurallarıyla ~{TARAMA_SN} sn'de bir tam tur; kurulum "
-                  f"çıkan coin ANINDA buraya düşer, kâğıt işlemle takip edilir. "
-                  f"Komut dinlemez — komutlar ana bottadır.")
+        if self.banner:
+            self.send(f"🛰️ Coin tarayıcı başladı: {', '.join(c[:-4] for c in COINS)}.\n"
+                      f"Ana botun kurallarıyla ~{TARAMA_SN} sn'de bir tam tur; kurulum "
+                      f"çıkan coin ANINDA buraya düşer, kâğıt işlemle takip edilir. "
+                      f"Komut dinlemez — komutlar ana bottadır.")
         son_ozet = time.time()
         while True:
             t0 = time.time()
@@ -244,7 +250,7 @@ class Tarayici:
                 except Exception as e:  # noqa: BLE001
                     logger.warning(f"{sym} tur hatası: {e}")
             self._save()
-            if time.time() - son_ozet >= OZET_SN:
+            if self.ozet_acik and time.time() - son_ozet >= OZET_SN:
                 son_ozet = time.time()
                 try:
                     self.send(self.ozet())

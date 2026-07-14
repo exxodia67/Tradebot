@@ -8,6 +8,8 @@
 *.sqlite3
 logs/
 *.log
+copilot_log.txt
+kurulum_log.txt
 
 # Python
 __pycache__/
@@ -23,3 +25,4 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+token

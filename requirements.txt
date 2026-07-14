@@ -1,5 +1,5 @@
 # --- Borsa / veri ---
-python-binance>=1.0.19      # Binance Futures REST + WebSocket + Testnet
+python-binance>=1.0.19      # Binance Futures REST (mainnet public klines)
 
 # --- Veri / hesaplama ---
 pandas>=2.0
@@ -10,13 +10,6 @@ pydantic>=2.5
 pydantic-settings>=2.1
 python-dotenv>=1.0
 PyYAML>=6.0
-
-# --- Kalıcılık ---
-SQLAlchemy>=2.0
-
-# --- Web dashboard ---
-fastapi>=0.110
-uvicorn[standard]>=0.27
 
 # --- Loglama ---
 loguru>=0.7

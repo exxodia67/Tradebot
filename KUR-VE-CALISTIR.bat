@@ -83,6 +83,12 @@ echo .env olusturuldu.
 
 :calistir
 echo [3/3] Bot baslatiliyor... Telegram'dan /start yaz.
+echo.
+echo  TEK UYGULAMA - hepsi bu pencerede:
+echo    - Ana plan: ETH 15m + 1h (aninda kurulum uyarisi)
+echo    - Tarayici: BTC + LINK (ayni kurallar)
+echo    - Firsat Avcisi: 90g ruhsatli pattern'ler
+echo  GERCEK EMIR ACMAZ - analiz eder, uyarir; emri SEN verirsin.
 echo (Durdurmak icin bu pencereyi kapat. Coker ise 10 sn'de kendini yeniden baslatir.)
 :dongu
 .venv\Scripts\python -m tradebot.telegram_bot
