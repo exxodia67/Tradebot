@@ -20,6 +20,11 @@ from tradebot.config import ROOT, STATE_DIR
 # Giriş anında saklanan ek özellikler (sonradan öğrenme analizi için)
 _FEATURES = ("rsi", "vol_ratio", "room_atr", "sep_pct", "hour")
 
+# Gidiş-dönüş taker komisyonu (%): 2 x %0.05 (Binance USDⓈ-M VIP0, BNB indirimsiz
+# — kötümser varsayım). pnl_pct HAM fiyat değişimi olarak saklanır; komisyonlu
+# rakam gösterim anında düşülür (summary -> toplam_net_pct).
+FEE_RT_PCT = 0.10
+
 
 class Journal:
     def __init__(self, path: Path | str | None = None):
@@ -86,13 +91,16 @@ class Journal:
         con.close()
         n = len(rows)
         if n == 0:
-            return {"kapanan": 0, "win_rate": 0.0, "ort_pnl_pct": 0.0, "toplam_pnl_pct": 0.0}
+            return {"kapanan": 0, "win_rate": 0.0, "ort_pnl_pct": 0.0,
+                    "toplam_pnl_pct": 0.0, "toplam_net_pct": 0.0}
         pnls = [p for _, p in rows if p is not None]
         return {
             "kapanan": n,
             "win_rate": round(sum(1 for p in pnls if p > 0) / n * 100, 1),
             "ort_pnl_pct": round(sum(pnls) / len(pnls), 3) if pnls else 0.0,
             "toplam_pnl_pct": round(sum(pnls), 2),
+            # komisyonlu net: her kapanan işlem gidiş-dönüş komisyon öder (BE dahil)
+            "toplam_net_pct": round(sum(p - FEE_RT_PCT for p in pnls), 2),
         }
 
     def last_trades(self, n: int = 8) -> list[dict]:

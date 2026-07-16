@@ -215,7 +215,8 @@ class TelegramBot:
         s = jr.summary()
         out = [baslik,
                f"{s['kapanan']} kapanan · win %{s['win_rate']} · "
-               f"toplam %{s['toplam_pnl_pct']} (5x %{s['toplam_pnl_pct'] * 5:+.2f})"]
+               f"toplam %{s['toplam_pnl_pct']} · komisyonla %{s['toplam_net_pct']} "
+               f"(5x %{s['toplam_net_pct'] * 5:+.2f})"]
         for r in jr.last_trades(n):
             try:
                 t = (datetime.fromisoformat(r["ts"]) + timedelta(hours=3)

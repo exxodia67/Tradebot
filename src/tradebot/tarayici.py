@@ -37,7 +37,7 @@ from loguru import logger
 from tradebot.config import STATE_DIR, Secrets
 from tradebot.copilot import PLANS, Copilot, Setup
 from tradebot.datafeed import make_feed
-from tradebot.journal import Journal
+from tradebot.journal import FEE_RT_PCT, Journal
 
 COINS = ("BTCUSDT", "LINKUSDT")
 CHAT_FILE = STATE_DIR / "telegram_chat.json"
@@ -198,10 +198,12 @@ class Tarayici:
                         self.cooldown[key] = (datetime.now(timezone.utc)
                                               + timedelta(minutes=dk))
                         ek = f"\n({sym} [{tf}] {dk} dk soğumada — hemen yeniden girmez)"
+                    net = chg - FEE_RT_PCT
                     self.send(f"{em} 🛰️ {sym} [{tf}] {ad}: {a.side} {fmt(a.entry)} -> "
-                              f"{fmt(exit_px)} ({chg:+.2f}% | 5x {chg * 5:+.2f}%) "
+                              f"{fmt(exit_px)} ({chg:+.2f}% ham | komisyonla "
+                              f"{net:+.2f}% | 5x {net * 5:+.2f}%) "
                               f"{saat} TR\nTarayıcı karnesi: {s['kapanan']} kapanan, "
-                              f"win %{s['win_rate']}, toplam %{s['toplam_pnl_pct']}{ek}")
+                              f"win %{s['win_rate']}, komisyonla %{s['toplam_net_pct']}{ek}")
                     self.active.pop(key, None)
                 elif a.be_at and not a.be_armed and (
                         price >= a.be_at if a.side == "LONG" else price <= a.be_at):
@@ -228,7 +230,8 @@ class Tarayici:
         s = self.journal.summary()
         if s["kapanan"]:
             lines.append(f"📒 Karne: {s['kapanan']} kapanan, win %{s['win_rate']}, "
-                         f"toplam %{s['toplam_pnl_pct']} (5x %{s['toplam_pnl_pct'] * 5:+.1f})")
+                         f"toplam %{s['toplam_pnl_pct']}, komisyonla %{s['toplam_net_pct']} "
+                         f"(5x %{s['toplam_net_pct'] * 5:+.1f})")
         lines.append("Not: kâğıt işlem — kurallar ETH'de test edildi, "
                      "bu coinlerde kanıt topluyoruz.")
         return "\n".join(lines)

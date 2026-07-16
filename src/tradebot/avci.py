@@ -37,7 +37,7 @@ from loguru import logger
 from tradebot.config import STATE_DIR, Secrets
 from tradebot.copilot import Setup
 from tradebot.exchange.binance_futures import fetch_mainnet_klines
-from tradebot.journal import Journal
+from tradebot.journal import FEE_RT_PCT, Journal
 from tradebot.learner import add_higher_trend, prep, signals, walk_forward
 from tradebot.ogrenme_daemon import PAT_TR
 from tradebot.tarayici import fmt
@@ -190,10 +190,12 @@ class Avci:
                 ek = f"\n({sym} {SOGUMA_DK} dk soğumada)"
             s = self.journal.summary()
             saat = (hit_t + timedelta(hours=3)).strftime("%H:%M")
+            net = chg - FEE_RT_PCT
             self.send(f"{em} 🎯 {sym} {hit}: {a.side} {fmt(a.entry)} -> "
-                      f"{fmt(exit_px)} ({chg:+.2f}% | 5x {chg * 5:+.2f}%) {saat} TR\n"
+                      f"{fmt(exit_px)} ({chg:+.2f}% ham | komisyonla "
+                      f"{net:+.2f}% | 5x {net * 5:+.2f}%) {saat} TR\n"
                       f"Avcı karnesi: {s['kapanan']} kapanan, win %{s['win_rate']}, "
-                      f"toplam %{s['toplam_pnl_pct']}{ek}")
+                      f"komisyonla %{s['toplam_net_pct']}{ek}")
             self.active.pop(sym, None)
             return
         cd = self.cooldown.get(sym)
@@ -251,7 +253,7 @@ class Avci:
         s = self.journal.summary()
         if s["kapanan"]:
             lines.append(f"📒 Karne: {s['kapanan']} kapanan, win %{s['win_rate']}, "
-                         f"toplam %{s['toplam_pnl_pct']}")
+                         f"toplam %{s['toplam_pnl_pct']}, komisyonla %{s['toplam_net_pct']}")
         if not self.active and not s["kapanan"]:
             lines.append("📌 Henüz işlem yok — ruhsatlı pattern'ler bar kapanışı bekliyor.")
         return "\n".join(lines)

@@ -59,7 +59,7 @@ from loguru import logger
 from tradebot.config import ROOT
 from tradebot.datafeed import make_feed
 from tradebot.indicators import adx, atr, rsi, sma
-from tradebot.journal import Journal
+from tradebot.journal import FEE_RT_PCT, Journal
 
 # Plan tanımları: giriş TF -> (trend TF, hedef R, min ADX, 24s S/R bar sayısı,
 #                              sessiz saatler UTC)
@@ -384,12 +384,15 @@ class Copilot:
                             elif price <= a.target: hit = "HEDEF"
                         if hit:
                             self.journal.close(aid, hit, round(chg, 3))
+                            net = chg - FEE_RT_PCT
                             self.say(f"{ts}  >>> [{tf}] {hit}!  {a.side} {a.entry:.2f} -> "
-                                     f"{price:.2f} ({chg:+.2f}% x{self.leverage} = "
-                                     f"{chg * self.leverage:+.2f}%)")
+                                     f"{price:.2f} ({chg:+.2f}% ham | komisyonla "
+                                     f"{net:+.2f}% x{self.leverage} = "
+                                     f"{net * self.leverage:+.2f}%)")
                             s = self.journal.summary()
                             self.say(f"     journal: {s['kapanan']} kapanan, win %{s['win_rate']}, "
-                                     f"toplam {s['toplam_pnl_pct']:+.2f}%")
+                                     f"toplam {s['toplam_pnl_pct']:+.2f}%, "
+                                     f"komisyonla {s['toplam_net_pct']:+.2f}%")
                             if hit == "STOP":  # stop avı olabilir — reclaim nöbeti (BE değil)
                                 self._reentry[tf] = {
                                     "side": a.side, "entry": a.entry,

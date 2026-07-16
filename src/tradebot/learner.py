@@ -18,7 +18,7 @@ Ne yapar:
        P13_WAVETREND: WaveTrend ±40 aşırı bölgeden kesişim [TV: LazyBear]
   3) Her sinyali ATR-stop / R-hedefle sonucuna kadar izler ve puanlar.
      DÜRÜSTLÜK: aynı barda stop+hedef ikisi de vurulmuşsa STOP sayılır (kötümser),
-     her işlemden %0.08 gidiş-dönüş komisyon düşülür.
+     her işlemden %0.10 gidiş-dönüş komisyon düşülür (2 x %0.05 taker, VIP0).
   4) Sonuçları koşullara kırar (ADX, hacim, RSI, saat, gün, volatilite, trend yaşı,
      momentum, baraja mesafe) + çıkış formüllerini (stop x hedef) yarıştırır
      -> ogrenilen_kurallar.md
@@ -40,8 +40,7 @@ import pandas as pd
 from tradebot.config import ROOT
 from tradebot.exchange.binance_futures import fetch_mainnet_klines
 from tradebot.indicators import adx, atr, rsi, sma, supertrend, vwap_daily, wavetrend
-
-FEE_RT_PCT = 0.08   # gidiş-dönüş taker komisyonu (%): 2 x %0.04
+from tradebot.journal import FEE_RT_PCT  # gidiş-dönüş taker komisyonu (tek kaynak)
 WEEKDAYS = ("Pzt", "Sal", "Car", "Per", "Cum", "Cmt", "Paz")
 EXIT_COMBOS = ((1.0, 1.5), (1.0, 2.0), (1.5, 2.0), (1.5, 3.0), (2.0, 2.0))
 
