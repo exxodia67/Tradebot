@@ -156,6 +156,12 @@ class Copilot:
         kullanır (kural kopyası yok, sapma yok).
         """
         p = PLANS[tf]
+        # HAFTA SONU FRENİ (kanıt 17.07.2026, 90g ETH+LINK n=27): Cmt+Paz
+        # işlemleri iki yarıda da eksi (ort -%0.09/-%0.27), hafta içi +%0.32.
+        # Hafta sonu YENİ giriş yok; açık pozisyon takibi normal devam eder.
+        t_now = now if now is not None else datetime.now(timezone.utc)
+        if (t_now + timedelta(hours=3)).weekday() >= 5:
+            return None, "hafta sonu — yeni giriş yok (kural, kanıt: 90g n=27 eksi)"
         if d_hi is None:
             d_hi = self._tf(p["trend"])
         if d_lo is None:
@@ -295,6 +301,8 @@ class Copilot:
         if not ra:
             return None
         now = datetime.now(timezone.utc)
+        if (now + timedelta(hours=3)).weekday() >= 5:
+            return None   # hafta sonu freni — reclaim girişleri de dahil
         p = PLANS[tf]
         if now > ra["until"]:
             self._reentry.pop(tf, None)
