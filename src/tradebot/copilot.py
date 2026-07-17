@@ -65,7 +65,10 @@ from tradebot.journal import FEE_RT_PCT, Journal
 #                              sessiz saatler UTC)
 PLANS: dict[str, dict] = {
     "15m": {"trend": "1h", "rr": 2.0, "tp_r": 0.75, "adx_min": 20.0, "sr_win": 96,
-            "quiet": (20, 21, 22, 23), "be": 0.0},
+            # 20-23 UTC (23-02 TR): gece dilimi, 90g'de zararlı.
+            # 4-6 UTC (07-09 TR): sabah dilimi — kanıt 17.07.2026: 180g n=32
+            # ort -%0.09; hipotezi görmemiş eski 90g'de de eksi (n=13 -%0.18).
+            "quiet": (4, 5, 6, 20, 21, 22, 23), "be": 0.0},
     "1h":  {"trend": "1d", "rr": 3.0, "adx_min": 25.0, "sr_win": 24,
             "quiet": (), "be": 0.0},   # 1h: BE testte ZARARLI (3R'ye nefes lazım)
 }
@@ -207,9 +210,9 @@ class Copilot:
 
         # --- Kalite filtreleri ---
         if not self.no_quiet and hour in p["quiet"]:
-            return None, (f"{read} · gece {(hour + 3) % 24:02d}:00 TR — 90g testte bu "
-                          f"dilim 15m'de zararlı (86 işlem, win %26, ort -%0.19) — "
-                          f"15m uyarısı kapalı, 1h planı gece de açık")
+            return None, (f"{read} · sessiz dilim {(hour + 3) % 24:02d}:00 TR — testte "
+                          f"zararlı saat (gece 23-02 / sabah 07-09 TR) — "
+                          f"15m uyarısı kapalı, 1h planı açık")
         if adx_v < self._plan_adx_min(tf):
             return None, f"{read} · ADX zayıf<{self._plan_adx_min(tf):.0f} (choppy) — BEKLE"
         if sep_pct < self.ma_sep_min_pct:
