@@ -115,6 +115,7 @@ class Copilot:
         rsi_overbought: float = 78.0,   # sadece uç blow-off koruması
         rsi_oversold: float = 22.0,
         no_quiet: bool = False,
+        no_weekend: bool = False,       # sadece test: hafta sonu frenini kapatır
     ):
         self.symbol = symbol
         self.leverage = leverage
@@ -124,6 +125,7 @@ class Copilot:
         self.rsi_overbought = rsi_overbought
         self.rsi_oversold = rsi_oversold
         self.no_quiet = no_quiet
+        self.no_weekend = no_weekend
         self.adx_overrides = {"15m": adx_min}   # CLI 15m eşiğini değiştirebilir
         self.feed = make_feed()  # futures; bloklu ortamda (GitHub) Vision spot
         self.journal = Journal()
@@ -163,7 +165,7 @@ class Copilot:
         # işlemleri iki yarıda da eksi (ort -%0.09/-%0.27), hafta içi +%0.32.
         # Hafta sonu YENİ giriş yok; açık pozisyon takibi normal devam eder.
         t_now = now if now is not None else datetime.now(timezone.utc)
-        if (t_now + timedelta(hours=3)).weekday() >= 5:
+        if not self.no_weekend and (t_now + timedelta(hours=3)).weekday() >= 5:
             return None, "hafta sonu — yeni giriş yok (kural, kanıt: 90g n=27 eksi)"
         if d_hi is None:
             d_hi = self._tf(p["trend"])
