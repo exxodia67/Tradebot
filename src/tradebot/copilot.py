@@ -83,6 +83,28 @@ PLANS: dict[str, dict] = {
 # (hedef BE tetiğinden önce gelir) — 15m'de kapatıldı. 1h planı değişmedi.
 
 
+# KALİTE ETİKETİ (kanıt 31.08.2026, 225g iki-dönem sınavı — D1: 17.01-17.07
+# kuralların doğduğu veri, D2: 17.07-31.08 kuralların GÖRMEDİĞİ veri).
+# İşlem başına ortalama net %, komisyon dahil:
+#   1h planı        D1 n=10 +0.90 | D2 n=4  +3.14   -> az gelir, çok getirir
+#   15m PULLBACK    D1 n=58 +0.12 | D2 n=11 +0.24   -> tek tutarlı 15m kazancı
+#   15m TREND       D1 n=45 +0.04 | D2 n=11 +0.03   -> komisyon sınırında
+#   15m KIRILIM     D1 n=11 +0.27 | D2 n=3  -0.94   -> işaret değiştirdi
+# Not: kural değil, ETİKET. Sinyaller aynen gelir; hangisine ağırlık vereceğine
+# kullanıcı karar verir (30$ hesapta dikkat ve komisyon sınırlı kaynak).
+def kalite_etiketi(tf: str, reason: str) -> str:
+    if tf == "1h":
+        return "⭐⭐⭐ EN DEĞERLİ (1h planı: 14 işlemde ort +%1.5)"
+    r = reason or ""
+    if "PULLBACK" in r:
+        return "⭐⭐ GÜVENİLİR (15m pullback: iki dönemde de artı, ort +%0.15)"
+    if "KIRILIM" in r:
+        return "⚠️ TUTARSIZ (15m kırılım: eski dönem artı, yeni dönem eksi)"
+    if "TREND" in r:
+        return "⭐ ZAYIF (15m trend-takip: ort +%0.04 — komisyon sınırında)"
+    return ""
+
+
 @dataclass
 class Setup:
     side: str            # LONG / SHORT
@@ -443,6 +465,8 @@ class Copilot:
             self.say(f"  BE    : fiyat {s.be_at:.2f} olursa STOP'u girişe çek "
                      f"(90g test: toplam kârı 2x'ledi)")
         self.say(f"  Neden : {s.reason}")
+        if (et := kalite_etiketi(s.tf, s.reason)):
+            self.say(f"  Kalite: {et}")
         self.say(f"  (Emri ve STOP'u Binance'e SEN koy. Kaldıraç {self.leverage}x.)")
         self.say("=" * 60 + "\n")
 

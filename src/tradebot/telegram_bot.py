@@ -35,7 +35,7 @@ import requests
 from loguru import logger
 
 from tradebot.config import ROOT, STATE_DIR, Secrets
-from tradebot.copilot import PLANS, Copilot, Setup
+from tradebot.copilot import PLANS, Copilot, Setup, kalite_etiketi
 from tradebot.indicators import adx, atr, rsi, sma
 from tradebot.journal import Journal
 
@@ -455,11 +455,13 @@ class TelegramBot:
                             tv_gorus = u + "\n"
                     except Exception:  # noqa: BLE001
                         pass
+                    et = kalite_etiketi(tf, setup.reason)
                     self.send(f"{head}\n"
                               f"Giriş: {setup.entry:.2f}  Şu an: {price:.2f}\n"
                               f"Stop: {setup.stop:.2f}\nHedef: {setup.target:.2f}\n"
                               f"{be_satir}{tv_gorus}{setup.reason}\n"
-                              f"(Emri ve STOP'u SEN koy — 5x)\n"
+                              + (f"{et}\n" if et else "")
+                              + f"(Emri ve STOP'u SEN koy — 5x)\n"
                               f"Grafik: {tv_link}")
                     cp.say(f"TG uyarı: [{tf}] {setup.side} {setup.entry:.2f} (yol %{prog*100:.0f})")
             else:

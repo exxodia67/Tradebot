@@ -35,7 +35,7 @@ import requests
 from loguru import logger
 
 from tradebot.config import STATE_DIR, Secrets
-from tradebot.copilot import PLANS, Copilot, Setup
+from tradebot.copilot import PLANS, Copilot, Setup, kalite_etiketi
 from tradebot.datafeed import make_feed
 from tradebot.journal import FEE_RT_PCT, Journal
 
@@ -170,10 +170,12 @@ class Tarayici:
                 saat = (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%H:%M")
                 be = (f"BE: fiyat {fmt(setup.be_at)} olursa stopu girişe çek\n"
                       if setup.be_at else "")
+                et = kalite_etiketi(tf, setup.reason)
                 self.send(f"🛰️ KURULUM {sym} [{tf}] {setup.side}  ({saat} TR)\n"
                           f"Giriş: {fmt(setup.entry)}  Stop: {fmt(setup.stop)}  "
                           f"Hedef: {fmt(setup.target)}\n{be}{setup.reason}\n"
-                          f"(Kâğıt işlem — emir istersen SEN aç, 5x)\n"
+                          + (f"{et}\n" if et else "")
+                          + f"(Kâğıt işlem — emir istersen SEN aç, 5x)\n"
                           f"Grafik: https://www.tradingview.com/chart/?symbol="
                           f"BINANCE:{sym}.P&interval={'15' if tf == '15m' else '60'}")
                 logger.info(f"kurulum: {key} {setup.side} @{setup.entry}")
